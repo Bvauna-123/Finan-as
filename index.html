@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FluxoPróximo | Dashboard Premium</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#4f46e5">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+    <div class="app-layout">
+        <main class="main-content">
+            
+            <header class="topbar animate-fade-in">
+                <div class="header-titles">
+                    <div class="logo-icon">✨</div>
+                    <div>
+                        <h1 class="page-title">FluxoPróximo</h1>
+                        <p class="page-subtitle">Seu controle financeiro inteligente</p>
+                    </div>
+                </div>
+                
+                <div class="renda-widget shadow-hover" id="renda-widget-container">
+                    <div id="renda-view" class="renda-view hidden">
+                        <span class="renda-label">Renda Base</span>
+                        <strong id="renda-valor-display">R$ 0,00</strong>
+                        <button id="btn-editar-renda" class="btn-icon" title="Editar">✏️</button>
+                    </div>
+                    <form id="form-usuario" class="renda-form hidden">
+                        <div class="input-with-icon">
+                            <span class="icon">R$</span>
+                            <input type="number" id="salario" class="input-premium" step="0.01" placeholder="3500.00" required>
+                        </div>
+                        <button type="submit" class="btn-primary btn-sm">Salvar</button>
+                        <button type="button" id="btn-cancelar-renda" class="btn-ghost btn-sm hidden">Cancelar</button>
+                    </form>
+                </div>
+            </header>
+
+            <div class="action-bar animate-fade-in delay-1">
+                <button id="btn-abrir-lancamento" class="btn-primary shadow-hover"><span class="icon-text">➕</span> Novo Lançamento</button>
+                <button id="btn-abrir-simulador" class="btn-dark shadow-hover"><span class="icon-text">🔮</span> Simular Compra</button>
+            </div>
+
+            <section class="card projection-card animate-fade-in delay-2 shadow-hover mt-4">
+                <div class="card-header border-none" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                    <h2>Visão Mensal</h2>
+                    <div class="month-navigator">
+                        <button id="btn-prev-month" class="nav-arrow" title="Mês Anterior">❮</button>
+                        <input type="month" id="consulta-mes" class="pill-input premium-select">
+                        <button id="btn-next-month" class="nav-arrow" title="Próximo Mês">❯</button>
+                    </div>
+                </div>
+
+                <div id="dashboard-mensal" class="dashboard hidden-smooth mt-2">
+                    <div class="metrics-grid">
+                        <div class="metric-box bg-slate">
+                            <div class="metric-icon-wrap text-emerald">📈</div>
+                            <div>
+                                <span>Receita Projetada</span>
+                                <h3 id="dash-renda">R$ 0,00</h3>
+                            </div>
+                        </div>
+                        <div class="metric-box bg-slate">
+                            <div class="metric-icon-wrap text-rose">📉</div>
+                            <div>
+                                <span>Total em Despesas</span>
+                                <h3 id="dash-despesas">R$ 0,00</h3>
+                            </div>
+                        </div>
+                        <div class="metric-box balance-box shadow-lg" id="card-saldo">
+                            <div class="metric-icon-wrap text-white">💰</div>
+                            <div>
+                                <span>Saldo Livre</span>
+                                <h3 id="dash-saldo">R$ 0,00</h3>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-content-grid mt-4">
+                        <div class="chart-container card-outline hidden">
+                            <h3 class="chart-title">Distribuição de Gastos</h3>
+                            <div style="position: relative; height: 250px; width: 100%; display: flex; justify-content: center;">
+                                <canvas id="categoryChart"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="table-container card-outline">
+                            <table class="modern-table">
+                                <thead>
+                                    <tr>
+                                        <th>Descrição</th>
+                                        <th>Categoria</th>
+                                        <th>Valor</th>
+                                        <th class="text-right">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="lista-despesas-corpo"></tbody>
+                            </table>
+                            <div id="empty-state" class="empty-state hidden">
+                                <div class="empty-icon">🍃</div>
+                                <h4>Tudo Limpo!</h4>
+                                <p>Seu fluxo de caixa está livre neste mês.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div id="modal-form-lancamento" class="modal-overlay hidden">
+        <div class="modal-content form-modal shadow-xl">
+            <div class="modal-header">
+                <h2 id="modal-lancamento-titulo">Adicionar Lançamento</h2>
+                <button class="btn-close-modal btn-fechar">✖</button>
+            </div>
+            <form id="form-despesa" class="modern-form mt-4">
+                <div class="form-group full-width">
+                    <div class="segmented-control">
+                        <input type="radio" id="tipo-parcelada" name="tipoDespesa" value="parcelada" checked>
+                        <label for="tipo-parcelada">Parcelada</label>
+                        <input type="radio" id="tipo-fixa" name="tipoDespesa" value="fixa">
+                        <label for="tipo-fixa">Conta Fixa</label>
+                        <div class="segmented-highlight"></div>
+                    </div>
+                </div>
+                <div class="form-group full-width">
+                    <label class="label-premium">O que é?</label>
+                    <input type="text" id="descricao" class="input-premium" placeholder="Ex: Monitor Ultrawide" required>
+                </div>
+                <div id="dynamic-fields-container" class="full-width dynamic-container">
+                    <div id="grupo-parcelada" class="form-grid">
+                        <div class="form-group">
+                            <label class="label-premium">Valor Total</label>
+                            <div class="input-with-icon"><span class="icon">R$</span><input type="number" id="valor-total" class="input-premium" step="0.01"></div>
+                        </div>
+                        <div class="form-group">
+                            <label class="label-premium">Qtd. Parcelas</label>
+                            <input type="number" id="parcelas" class="input-premium" min="1">
+                        </div>
+                    </div>
+                    <div id="grupo-fixa" class="form-group hidden-smooth">
+                        <label class="label-premium">Valor Mensal</label>
+                        <div class="input-with-icon"><span class="icon">R$</span><input type="number" id="valor-mensal-fixo" class="input-premium" step="0.01"></div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="label-premium">Mês de Início</label>
+                    <input type="month" id="mes-inicio" class="input-premium" required>
+                </div>
+                <div class="form-group">
+                    <label class="label-premium">Categoria</label>
+                    <div style="display: flex; gap: 8px;">
+                        <select id="categoria" class="input-premium" required style="flex: 1;">
+                            <option value="" disabled selected>Selecione...</option>
+                        </select>
+                        <button type="button" id="btn-abrir-nova-cat" class="btn-outline" title="Criar Nova Categoria" style="padding: 0 1rem; border-radius: 8px;">➕</button>
+                    </div>
+                </div>
+                <div class="form-actions full-width mt-3">
+                    <button type="submit" id="btn-submit-lancamento" class="btn-primary w-100">Salvar Lançamento</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="modal-nova-categoria" class="modal-overlay hidden" style="z-index: 10005;">
+        <div class="modal-content shadow-xl" style="max-width: 350px;">
+            <div class="modal-header">
+                <h2>Nova Categoria</h2>
+                <button class="btn-close-modal btn-fechar">✖</button>
+            </div>
+            <form id="form-nova-categoria" class="mt-4" style="text-align: left;">
+                <div class="form-group">
+                    <label class="label-premium">Nome da Categoria</label>
+                    <input type="text" id="input-nova-cat" class="input-premium" placeholder="Ex: Farmácia, Estudos..." required>
+                </div>
+                <button type="submit" class="btn-primary w-100 mt-3">Adicionar Categoria</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="modal-form-simulador" class="modal-overlay hidden">
+        <div class="modal-content form-modal shadow-xl" style="max-width: 500px;">
+            <div class="modal-header">
+                <div>
+                    <h2>Simulador Financeiro</h2>
+                    <p class="text-muted text-sm mt-1">Análise de risco para novas dívidas</p>
+                </div>
+                <button class="btn-close-modal btn-fechar" style="align-self: flex-start;">✖</button>
+            </div>
+            <form id="form-simulador" class="modern-form mt-4">
+                <div class="form-group full-width">
+                    <label class="label-premium">Valor da Nova Compra</label>
+                    <div class="input-with-icon"><span class="icon">R$</span><input type="number" id="sim-valor" class="input-premium" step="0.01" required></div>
+                </div>
+                <div class="form-group">
+                    <label class="label-premium">Parcelas</label>
+                    <input type="number" id="sim-parcelas" class="input-premium" min="1" required>
+                </div>
+                <div class="form-group">
+                    <label class="label-premium">A partir de</label>
+                    <input type="month" id="sim-mes" class="input-premium" required>
+                </div>
+                <div class="form-actions full-width mt-2">
+                    <button type="submit" class="btn-dark w-100">Gerar Relatório de Viabilidade</button>
+                </div>
+            </form>
+            <div id="resultado-simulacao" class="resultado-box hidden-smooth mt-4"></div>
+        </div>
+    </div>
+
+    <div id="toast-container" class="toast-container"></div>
+    <div id="modal-confirmacao" class="modal-overlay hidden" style="z-index: 10002;">
+        <div class="modal-content alert-modal shadow-xl">
+            <div class="modal-icon text-rose">🗑️</div>
+            <h3 id="modal-titulo">Excluir Lançamento?</h3>
+            <p id="modal-mensagem" class="text-muted mt-2">Isso recalculará todas as suas projeções futuras.</p>
+            <div class="modal-actions mt-4" style="display: flex; gap: 10px; justify-content: center;">
+                <button id="btn-modal-cancelar" class="btn-ghost">Cancelar</button>
+                <button id="btn-modal-confirmar" class="btn-danger">Excluir</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="app.js"></script>
+</body>
+</html>
