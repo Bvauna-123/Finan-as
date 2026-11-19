@@ -1,11 +1,11 @@
-const CACHE_NAME = 'fluxoproximo-v3';
+const CACHE_NAME = 'fluxoproximo-v5';
 const urlsToCache = [
     './',
     './index.html',
     './style.css',
     './app.js',
     './manifest.json',
-    'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap',
+    'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap',
     'https://cdn.jsdelivr.net/npm/chart.js'
 ];
 

@@ -22,21 +22,44 @@ if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("./sw.js").catch(() => {});
 }
 
+// Bloqueio adicional de zoom por gesto de pinça e duplo toque (comportamento app)
+document.addEventListener("gesturestart", (e) => e.preventDefault(), { passive: false });
+document.addEventListener("gesturechange", (e) => e.preventDefault(), { passive: false });
+document.addEventListener("gestureend", (e) => e.preventDefault(), { passive: false });
+
+document.addEventListener("touchmove", (e) => {
+    if (e.touches && e.touches.length > 1) {
+        e.preventDefault();
+    }
+}, { passive: false });
+
+let ultimoToque = 0;
+document.addEventListener("touchend", (e) => {
+    const agora = Date.now();
+    if (agora - ultimoToque <= 280) {
+        e.preventDefault();
+    }
+    ultimoToque = agora;
+}, { passive: false });
+
 const USER_ID = "meu_usuario_principal";
 const formatadorReal = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
-const CORES_GRAFICO = ["#66d9e8", "#8ce99a", "#ffd43b", "#ff8787", "#b197fc", "#ffa94d", "#63e6be", "#74c0fc"];
+const CORES_GRAFICO = ["#ff7a3d", "#e44b8d", "#6c5ce7", "#38d9a9", "#fcc419", "#74c0fc", "#b197fc", "#63e6be"];
+const DOT_CLASSES = ["dot-orange", "dot-cyan", "dot-purple", "dot-pink"];
 
 let meuGrafico = null;
 let idEdicaoAtual = null;
-let lancamentosMesCache = [];
+let lancamentosMes = [];
+let categoriaAtiva = "TODAS";
+let filtroTipoCartao = "TODOS";
 
 function showToast(mensagem) {
     const container = document.getElementById("toast-container");
-    const item = document.createElement("div");
-    item.className = "toast-msg";
-    item.textContent = mensagem;
-    container.appendChild(item);
-    setTimeout(() => item.remove(), 2800);
+    const toast = document.createElement("div");
+    toast.className = "toast-item";
+    toast.textContent = mensagem;
+    container.appendChild(toast);
+    setTimeout(() => toast.remove(), 2800);
 }
 
 function abrirModal(id) {
@@ -49,13 +72,13 @@ function fecharModal(id) {
 
 document.querySelectorAll(".btn-fechar").forEach(btn => {
     btn.addEventListener("click", (e) => {
-        e.target.closest(".modal-backdrop").classList.add("hidden");
+        e.target.closest(".modal-overlay").classList.add("hidden");
     });
 });
 
-document.querySelectorAll(".modal-backdrop").forEach(backdrop => {
-    backdrop.addEventListener("click", (e) => {
-        if (e.target === backdrop) backdrop.classList.add("hidden");
+document.querySelectorAll(".modal-overlay").forEach(overlay => {
+    overlay.addEventListener("click", (e) => {
+        if (e.target === overlay) overlay.classList.add("hidden");
     });
 });
 
@@ -105,6 +128,27 @@ function formatarCategoria(texto) {
     return limpo.charAt(0).toUpperCase() + limpo.slice(1);
 }
 
+// Navegação de Abas e Vista
+function alternarVista(vista) {
+    const isCartao = vista === "cartao";
+    document.getElementById("vista-visao").classList.toggle("hidden", isCartao);
+    document.getElementById("vista-cartao").classList.toggle("hidden", !isCartao);
+
+    document.getElementById("tab-visao").classList.toggle("active", !isCartao);
+    document.getElementById("tab-cartao").classList.toggle("active", isCartao);
+    document.getElementById("tab-visao").setAttribute("aria-selected", String(!isCartao));
+    document.getElementById("tab-cartao").setAttribute("aria-selected", String(isCartao));
+
+    document.getElementById("nav-home").classList.toggle("active", !isCartao);
+    document.getElementById("nav-card").classList.toggle("active", isCartao);
+}
+
+document.getElementById("tab-visao").addEventListener("click", () => alternarVista("visao"));
+document.getElementById("tab-cartao").addEventListener("click", () => alternarVista("cartao"));
+document.getElementById("nav-home").addEventListener("click", () => alternarVista("visao"));
+document.getElementById("nav-card").addEventListener("click", () => alternarVista("cartao"));
+
+// Categorias e Pills
 async function obterCategoriasUnicas() {
     const padroes = ["Moradia", "Alimentação", "Tecnologia", "Assinaturas", "Lazer", "Outros"];
     const snap = await getDoc(doc(db, "usuarios", USER_ID));
@@ -112,14 +156,40 @@ async function obterCategoriasUnicas() {
     return [...new Set([...padroes, ...salvas])];
 }
 
-async function carregarCategoriasNoSelect(selecionarValor = null) {
-    const select = document.getElementById("categoria");
-    const filtro = document.getElementById("filtro-categoria");
-    const valorFiltroAtual = filtro.value || "TODAS";
+function renderizarPills(categorias, selecionarValor = null) {
+    const strip = document.getElementById("pills-strip");
+    strip.innerHTML = "";
 
+    const btnTodas = document.createElement("button");
+    btnTodas.type = "button";
+    btnTodas.className = `pill-tag ${categoriaAtiva === "TODAS" ? "active" : ""}`;
+    btnTodas.innerHTML = `<span class="dot dot-orange"></span> Todas`;
+    btnTodas.onclick = () => {
+        categoriaAtiva = "TODAS";
+        renderizarPills(categorias, selecionarValor);
+        renderizarListas();
+    };
+    strip.appendChild(btnTodas);
+
+    categorias.forEach((cat, idx) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = `pill-tag ${categoriaAtiva === cat ? "active" : ""}`;
+        const dotClass = DOT_CLASSES[idx % DOT_CLASSES.length];
+        btn.innerHTML = `<span class="dot ${dotClass}"></span> ${cat}`;
+        btn.onclick = () => {
+            categoriaAtiva = categoriaAtiva === cat ? "TODAS" : cat;
+            renderizarPills(categorias, selecionarValor);
+            renderizarListas();
+        };
+        strip.appendChild(btn);
+    });
+}
+
+async function sincronizarCategoriasUI(selecionarValor = null) {
+    const select = document.getElementById("categoria");
     try {
         const unicas = await obterCategoriasUnicas();
-
         select.innerHTML = `<option value="" disabled selected>Selecione...</option>`;
         unicas.forEach(cat => {
             const opt = document.createElement("option");
@@ -128,24 +198,19 @@ async function carregarCategoriasNoSelect(selecionarValor = null) {
             select.appendChild(opt);
         });
         if (selecionarValor) select.value = selecionarValor;
-
-        filtro.innerHTML = `<option value="TODAS">TODAS</option>`;
-        unicas.forEach(cat => {
-            const opt = document.createElement("option");
-            opt.value = cat;
-            opt.textContent = cat.toUpperCase();
-            filtro.appendChild(opt);
-        });
-        filtro.value = [...filtro.options].some(o => o.value === valorFiltroAtual) ? valorFiltroAtual : "TODAS";
+        renderizarPills(unicas, selecionarValor);
     } catch {
-        showToast("Não foi possível carregar as categorias.");
+        showToast("Erro ao carregar categorias.");
     }
 }
 
-document.getElementById("btn-abrir-nova-cat").addEventListener("click", () => {
+function abrirModalNovaCategoria() {
     document.getElementById("input-nova-cat").value = "";
     abrirModal("modal-nova-categoria");
-});
+}
+
+document.getElementById("btn-abrir-nova-cat").addEventListener("click", abrirModalNovaCategoria);
+document.getElementById("btn-abrir-nova-cat-rapida").addEventListener("click", abrirModalNovaCategoria);
 
 document.getElementById("form-nova-categoria").addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -162,7 +227,7 @@ document.getElementById("form-nova-categoria").addEventListener("submit", async 
             await setDoc(userRef, { categorias }, { merge: true });
         }
 
-        await carregarCategoriasNoSelect(catFormatada);
+        await sincronizarCategoriasUI(catFormatada);
         fecharModal("modal-nova-categoria");
         showToast("Categoria criada.");
     } catch {
@@ -170,6 +235,7 @@ document.getElementById("form-nova-categoria").addEventListener("submit", async 
     }
 });
 
+// Alternância Parcelada / Conta Fixa
 function aplicarTipoDespesa(tipo) {
     const isFixa = tipo === "fixa";
     document.getElementById("tipo-fixa").checked = isFixa;
@@ -189,6 +255,7 @@ function aplicarTipoDespesa(tipo) {
 document.getElementById("seg-parcelada").addEventListener("click", () => aplicarTipoDespesa("parcelada"));
 document.getElementById("seg-fixa").addEventListener("click", () => aplicarTipoDespesa("fixa"));
 
+// Abrir Modal de Lançamento
 async function abrirNovoLancamento() {
     idEdicaoAtual = null;
     document.getElementById("form-despesa").reset();
@@ -196,37 +263,44 @@ async function abrirNovoLancamento() {
     document.getElementById("modal-lancamento-titulo").textContent = "Adicionar lançamento";
     document.getElementById("btn-submit-lancamento").textContent = "Salvar lançamento";
     aplicarTipoDespesa("parcelada");
-    await carregarCategoriasNoSelect();
+    await sincronizarCategoriasUI();
     abrirModal("modal-form-lancamento");
 }
 
-document.getElementById("nav-lancamento").addEventListener("click", abrirNovoLancamento);
+document.getElementById("btn-abrir-lancamento").addEventListener("click", abrirNovoLancamento);
+document.getElementById("btn-novo-lancamento-cartao").addEventListener("click", abrirNovoLancamento);
+document.getElementById("nav-center-add").addEventListener("click", abrirNovoLancamento);
 
+// Gráfico
 function alternarGrafico() {
-    document.getElementById("painel-grafico").classList.toggle("hidden");
+    document.getElementById("grafico-box").classList.toggle("hidden");
 }
 
-document.getElementById("btn-toggle-grafico").addEventListener("click", alternarGrafico);
-document.getElementById("nav-grafico").addEventListener("click", alternarGrafico);
+document.getElementById("btn-alternar-grafico").addEventListener("click", alternarGrafico);
 
+// Simulador
 function abrirSimulador() {
     document.getElementById("sim-mes").value = document.getElementById("consulta-mes").value;
     document.getElementById("resultado-simulacao").classList.add("hidden");
     abrirModal("modal-form-simulador");
 }
 
-document.getElementById("btn-abrir-simulador-card").addEventListener("click", abrirSimulador);
-document.getElementById("nav-simulador").addEventListener("click", abrirSimulador);
+document.getElementById("btn-abrir-simulador").addEventListener("click", abrirSimulador);
+document.getElementById("nav-sim").addEventListener("click", abrirSimulador);
 
-function abrirEdicaoRenda() {
-    document.getElementById("form-usuario").classList.remove("hidden");
-    document.getElementById("salario").focus();
+// Renda Base
+function toggleFormRenda(forcarAbrir = false) {
+    const form = document.getElementById("form-usuario");
+    if (forcarAbrir) form.classList.remove("hidden");
+    else form.classList.toggle("hidden");
+    if (!form.classList.contains("hidden")) {
+        document.getElementById("salario").focus();
+    }
 }
 
-document.getElementById("btn-editar-renda").addEventListener("click", abrirEdicaoRenda);
-document.getElementById("btn-editar-renda-top").addEventListener("click", abrirEdicaoRenda);
-document.getElementById("nav-renda").addEventListener("click", abrirEdicaoRenda);
-
+document.getElementById("btn-toggle-renda").addEventListener("click", () => toggleFormRenda());
+document.getElementById("btn-editar-renda-cartao").addEventListener("click", () => toggleFormRenda(true));
+document.getElementById("nav-income").addEventListener("click", () => toggleFormRenda(true));
 document.getElementById("btn-cancelar-renda").addEventListener("click", () => {
     document.getElementById("form-usuario").classList.add("hidden");
 });
@@ -245,54 +319,73 @@ document.getElementById("form-usuario").addEventListener("submit", async (e) => 
             atualizadoEm: new Date().toISOString()
         }, { merge: true });
         document.getElementById("form-usuario").classList.add("hidden");
-        showToast("Renda base atualizada.");
+        showToast("Renda base salva.");
         await atualizarDashboardMensal();
     } catch {
-        showToast("Erro ao salvar a renda.");
+        showToast("Erro ao salvar renda.");
     }
 });
 
-function renderizarListaLancamentos() {
-    const listaEl = document.getElementById("lista-despesas-corpo");
-    const emptyEl = document.getElementById("empty-state");
-    const catFiltro = document.getElementById("filtro-categoria").value || "TODAS";
-
-    const itensFiltrados = catFiltro === "TODAS"
-        ? lancamentosMesCache
-        : lancamentosMesCache.filter(item => item.categoria === catFiltro);
-
-    listaEl.innerHTML = "";
-    emptyEl.classList.toggle("hidden", itensFiltrados.length > 0);
-
-    itensFiltrados.forEach(item => {
-        const row = document.createElement("div");
-        row.className = "tx-item";
-        row.innerHTML = `
-            <div class="tx-left">
-                <div class="tx-circle">${item.categoria.charAt(0).toUpperCase()}</div>
-                <div class="tx-meta">
-                    <span class="tx-title">${item.descricao}</span>
-                    <span class="tx-sub">${item.subtitulo}</span>
-                </div>
-            </div>
-            <div class="tx-right">
-                <span class="tx-value">-${formatadorReal.format(item.valorParcela)}</span>
-                <button type="button" class="tx-icon-btn btn-editar" data-id="${item.id}" title="Editar">✎</button>
-                <button type="button" class="tx-icon-btn btn-excluir" data-id="${item.id}" title="Excluir">✕</button>
-            </div>
-        `;
-        listaEl.appendChild(row);
+// Sub-abas de tipo na vista Cartão
+document.querySelectorAll(".sub-tab").forEach(btn => {
+    btn.addEventListener("click", () => {
+        document.querySelectorAll(".sub-tab").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        filtroTipoCartao = btn.getAttribute("data-filtro-tipo");
+        renderizarListas();
     });
+});
+
+function criarElementoLinha(item) {
+    const row = document.createElement("div");
+    row.className = "tx-row";
+    row.innerHTML = `
+        <div class="tx-main">
+            <div class="tx-avatar">${item.categoria.charAt(0).toUpperCase()}</div>
+            <div class="tx-info">
+                <span class="tx-name">${item.descricao}</span>
+                <span class="tx-cat">${item.subtitulo}</span>
+            </div>
+        </div>
+        <div class="tx-side">
+            <span class="tx-val">-${formatadorReal.format(item.valorParcela)}</span>
+            <button type="button" class="tx-act btn-editar" data-id="${item.id}" title="Editar" aria-label="Editar">✎</button>
+            <button type="button" class="tx-act btn-excluir" data-id="${item.id}" title="Excluir" aria-label="Excluir">✕</button>
+        </div>
+    `;
+    return row;
 }
 
-document.getElementById("filtro-categoria").addEventListener("change", renderizarListaLancamentos);
+function renderizarListas() {
+    const listaVisao = document.getElementById("lista-despesas-corpo");
+    const listaCartao = document.getElementById("lista-despesas-cartao");
+    const emptyEl = document.getElementById("empty-state");
 
+    const baseCat = categoriaAtiva === "TODAS"
+        ? lancamentosMes
+        : lancamentosMes.filter(item => item.categoria === categoriaAtiva);
+
+    const baseCartao = baseCat.filter(item => {
+        if (filtroTipoCartao === "FIXA") return item.isFixa;
+        if (filtroTipoCartao === "PARCELADA") return !item.isFixa;
+        return true;
+    });
+
+    listaVisao.innerHTML = "";
+    listaCartao.innerHTML = "";
+
+    emptyEl.classList.toggle("hidden", baseCat.length > 0);
+    baseCat.forEach(item => listaVisao.appendChild(criarElementoLinha(item)));
+    baseCartao.forEach(item => listaCartao.appendChild(criarElementoLinha(item)));
+}
+
+// Dashboard Mensal
 async function atualizarDashboardMensal() {
     const mesConsulta = document.getElementById("consulta-mes").value;
     if (!mesConsulta) return;
 
     try {
-        await carregarCategoriasNoSelect();
+        await sincronizarCategoriasUI();
 
         const userSnap = await getDoc(doc(db, "usuarios", USER_ID));
         const rendaMensal = userSnap.exists() ? Number(userSnap.data().salarioBase || 0) : 0;
@@ -306,7 +399,7 @@ async function atualizarDashboardMensal() {
 
         let totalDespesas = 0;
         const porCategoria = {};
-        lancamentosMesCache = [];
+        lancamentosMes = [];
 
         snap.forEach((docItem) => {
             const d = docItem.data();
@@ -326,24 +419,30 @@ async function atualizarDashboardMensal() {
                 ? `${cat} · Fixa`
                 : `${cat} · Parcela ${diffMeses(d.mesInicio, mesConsulta)}/${d.parcelasTotal}`;
 
-            lancamentosMesCache.push({
+            lancamentosMes.push({
                 id: docItem.id,
                 descricao: d.descricao,
                 categoria: cat,
+                isFixa: Boolean(d.isFixa),
                 subtitulo,
                 valorParcela: valor
             });
         });
 
-        const qtd = lancamentosMesCache.length;
         const saldoLivre = rendaMensal - totalDespesas;
+        const [anoStr, mesStr] = mesConsulta.split("-");
 
-        document.getElementById("dash-renda").textContent = formatadorReal.format(rendaMensal);
-        document.getElementById("dash-despesas").textContent = formatadorReal.format(totalDespesas);
         document.getElementById("dash-saldo").textContent = formatadorReal.format(saldoLivre);
-        document.getElementById("qtd-lancamentos-label").textContent = `${qtd} LANÇAMENTO${qtd === 1 ? "" : "S"}`;
+        document.getElementById("dash-renda-sub").textContent = `Renda: ${formatadorReal.format(rendaMensal)}`;
+        document.getElementById("dash-despesas-label").textContent = formatadorReal.format(totalDespesas);
 
-        renderizarListaLancamentos();
+        document.getElementById("dash-renda-destaque").textContent = formatadorReal.format(rendaMensal);
+        document.getElementById("dash-saldo-destaque").textContent = `Saldo livre: ${formatadorReal.format(saldoLivre)}`;
+        document.getElementById("gcard-despesas").textContent = formatadorReal.format(totalDespesas);
+        document.getElementById("gcard-mes").textContent = `${mesStr}/${anoStr}`;
+        document.getElementById("gcard-qtd").textContent = String(lancamentosMes.length);
+
+        renderizarListas();
 
         const ctx = document.getElementById("categoryChart").getContext("2d");
         if (meuGrafico) meuGrafico.destroy();
@@ -367,14 +466,14 @@ async function atualizarDashboardMensal() {
                     plugins: {
                         legend: {
                             position: "right",
-                            labels: { color: "#ffffff", boxWidth: 10, font: { size: 11 } }
+                            labels: { color: "#f5f6fa", boxWidth: 10, font: { size: 11 } }
                         }
                     }
                 }
             });
         }
     } catch {
-        showToast("Erro ao atualizar o painel.");
+        showToast("Erro ao atualizar dados.");
     }
 }
 
@@ -385,10 +484,11 @@ function mudarMes(delta) {
     atualizarDashboardMensal();
 }
 
-document.getElementById("btn-prev-month").addEventListener("click", () => mudarMes(-1));
-document.getElementById("btn-next-month").addEventListener("click", () => mudarMes(1));
+document.getElementById("btn-mes-anterior-top").addEventListener("click", () => mudarMes(-1));
+document.getElementById("btn-mes-seguinte-top").addEventListener("click", () => mudarMes(1));
 document.getElementById("consulta-mes").addEventListener("change", atualizarDashboardMensal);
 
+// Salvar / Editar Lançamento
 document.getElementById("form-despesa").addEventListener("submit", async (e) => {
     e.preventDefault();
 
@@ -441,7 +541,8 @@ document.getElementById("form-despesa").addEventListener("submit", async (e) => 
     }
 });
 
-document.getElementById("lista-despesas-corpo").addEventListener("click", async (e) => {
+// Delegação de Editar / Excluir nas Listas
+async function tratarCliqueLista(e) {
     const btnExcluir = e.target.closest(".btn-excluir");
     const btnEditar = e.target.closest(".btn-editar");
 
@@ -471,7 +572,7 @@ document.getElementById("lista-despesas-corpo").addEventListener("click", async 
 
             document.getElementById("descricao").value = d.descricao;
             document.getElementById("mes-inicio").value = d.mesInicio;
-            await carregarCategoriasNoSelect(d.categoria);
+            await sincronizarCategoriasUI(d.categoria);
 
             if (d.isFixa) {
                 aplicarTipoDespesa("fixa");
@@ -489,8 +590,12 @@ document.getElementById("lista-despesas-corpo").addEventListener("click", async 
             showToast("Erro ao carregar lançamento.");
         }
     }
-});
+}
 
+document.getElementById("lista-despesas-corpo").addEventListener("click", tratarCliqueLista);
+document.getElementById("lista-despesas-cartao").addEventListener("click", tratarCliqueLista);
+
+// Simulador de Compra
 document.getElementById("form-simulador").addEventListener("submit", async (e) => {
     e.preventDefault();
     const valorNovaParcela = parseFloat(document.getElementById("sim-valor").value);
@@ -505,7 +610,7 @@ document.getElementById("form-simulador").addEventListener("submit", async (e) =
         const rendaMensal = userSnap.exists() ? Number(userSnap.data().salarioBase || 0) : 0;
 
         if (rendaMensal <= 0) {
-            box.innerHTML = `<span class="sim-badge-warn">Defina primeiro a sua renda base para simular.</span>`;
+            box.innerHTML = `<span class="sim-warn">Defina primeiro a renda base para simular.</span>`;
             return;
         }
 
@@ -537,24 +642,24 @@ document.getElementById("form-simulador").addEventListener("submit", async (e) =
         }
 
         const impacto = ((valorNovaParcela / rendaMensal) * 100).toFixed(1);
-        let diagClass = "sim-badge-safe";
-        let diagTexto = "Margem confortável garantida.";
+        let cls = "sim-safe";
+        let resumo = "Margem confortável garantida.";
 
         if (mesesNegativos > 0) {
-            diagClass = "sim-badge-danger";
-            diagTexto = `Saldo negativo em ${mesesNegativos} mês(es).`;
+            cls = "sim-danger";
+            resumo = `Déficit em ${mesesNegativos} mês(es).`;
         } else if (menorSaldo < rendaMensal * 0.1) {
-            diagClass = "sim-badge-warn";
-            diagTexto = "Margem apertada no pior mês.";
+            cls = "sim-warn";
+            resumo = "Margem reduzida no pior mês.";
         }
 
         box.innerHTML = `
             <div>Parcela: <strong>${formatadorReal.format(valorNovaParcela)}</strong> (${impacto}% da renda)</div>
             <div>Pior mês: <strong>${mesCritico}</strong> · Saldo: <strong>${formatadorReal.format(menorSaldo)}</strong></div>
-            <div class="${diagClass}">${diagTexto}</div>
+            <div class="${cls}">${resumo}</div>
         `;
     } catch {
-        box.innerHTML = `<span class="sim-badge-danger">Erro ao calcular a simulação.</span>`;
+        box.innerHTML = `<span class="sim-danger">Erro ao calcular a simulação.</span>`;
     }
 });
 
