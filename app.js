@@ -80,7 +80,6 @@ function confirmarNaInterface(titulo, mensagem, onConfirm) {
     };
 }
 
-// Helpers numéricos de mês ("YYYY-MM")
 function parseMes(ym) {
     const [ano, mes] = ym.split("-").map(Number);
     return { ano, mes };
@@ -106,7 +105,6 @@ function formatarCategoria(texto) {
     return limpo.charAt(0).toUpperCase() + limpo.slice(1);
 }
 
-// Categorias
 async function obterCategoriasUnicas() {
     const padroes = ["Moradia", "Alimentação", "Tecnologia", "Assinaturas", "Lazer", "Outros"];
     const snap = await getDoc(doc(db, "usuarios", USER_ID));
@@ -172,7 +170,6 @@ document.getElementById("form-nova-categoria").addEventListener("submit", async 
     }
 });
 
-// Alternância Parcelada / Conta Fixa
 function aplicarTipoDespesa(tipo) {
     const isFixa = tipo === "fixa";
     document.getElementById("tipo-fixa").checked = isFixa;
@@ -192,7 +189,6 @@ function aplicarTipoDespesa(tipo) {
 document.getElementById("seg-parcelada").addEventListener("click", () => aplicarTipoDespesa("parcelada"));
 document.getElementById("seg-fixa").addEventListener("click", () => aplicarTipoDespesa("fixa"));
 
-// Abrir Modal de Lançamento
 async function abrirNovoLancamento() {
     idEdicaoAtual = null;
     document.getElementById("form-despesa").reset();
@@ -206,7 +202,6 @@ async function abrirNovoLancamento() {
 
 document.getElementById("nav-lancamento").addEventListener("click", abrirNovoLancamento);
 
-// Gráfico
 function alternarGrafico() {
     document.getElementById("painel-grafico").classList.toggle("hidden");
 }
@@ -214,7 +209,6 @@ function alternarGrafico() {
 document.getElementById("btn-toggle-grafico").addEventListener("click", alternarGrafico);
 document.getElementById("nav-grafico").addEventListener("click", alternarGrafico);
 
-// Simulador
 function abrirSimulador() {
     document.getElementById("sim-mes").value = document.getElementById("consulta-mes").value;
     document.getElementById("resultado-simulacao").classList.add("hidden");
@@ -224,7 +218,6 @@ function abrirSimulador() {
 document.getElementById("btn-abrir-simulador-card").addEventListener("click", abrirSimulador);
 document.getElementById("nav-simulador").addEventListener("click", abrirSimulador);
 
-// Renda Base
 function abrirEdicaoRenda() {
     document.getElementById("form-usuario").classList.remove("hidden");
     document.getElementById("salario").focus();
@@ -259,7 +252,6 @@ document.getElementById("form-usuario").addEventListener("submit", async (e) => 
     }
 });
 
-// Renderização da Lista com Filtro de Categoria
 function renderizarListaLancamentos() {
     const listaEl = document.getElementById("lista-despesas-corpo");
     const emptyEl = document.getElementById("empty-state");
@@ -295,7 +287,6 @@ function renderizarListaLancamentos() {
 
 document.getElementById("filtro-categoria").addEventListener("change", renderizarListaLancamentos);
 
-// Dashboard Mensal
 async function atualizarDashboardMensal() {
     const mesConsulta = document.getElementById("consulta-mes").value;
     if (!mesConsulta) return;
@@ -398,7 +389,6 @@ document.getElementById("btn-prev-month").addEventListener("click", () => mudarM
 document.getElementById("btn-next-month").addEventListener("click", () => mudarMes(1));
 document.getElementById("consulta-mes").addEventListener("change", atualizarDashboardMensal);
 
-// Salvar / Editar Lançamento (valor da parcela é o valor informado)
 document.getElementById("form-despesa").addEventListener("submit", async (e) => {
     e.preventDefault();
 
@@ -451,7 +441,6 @@ document.getElementById("form-despesa").addEventListener("submit", async (e) => 
     }
 });
 
-// Editar / Excluir na Lista
 document.getElementById("lista-despesas-corpo").addEventListener("click", async (e) => {
     const btnExcluir = e.target.closest(".btn-excluir");
     const btnEditar = e.target.closest(".btn-editar");
@@ -502,7 +491,6 @@ document.getElementById("lista-despesas-corpo").addEventListener("click", async 
     }
 });
 
-// Simulador de Compra (valor informado é o valor da parcela mensal)
 document.getElementById("form-simulador").addEventListener("submit", async (e) => {
     e.preventDefault();
     const valorNovaParcela = parseFloat(document.getElementById("sim-valor").value);
@@ -570,7 +558,6 @@ document.getElementById("form-simulador").addEventListener("submit", async (e) =
     }
 });
 
-// Inicialização
 async function init() {
     const hoje = new Date();
     const mesAtual = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}`;

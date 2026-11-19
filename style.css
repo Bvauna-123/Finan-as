@@ -43,7 +43,6 @@ body {
     gap: 1.6rem;
 }
 
-/* Cabeçalho */
 .app-header {
     display: flex;
     align-items: center;
@@ -75,7 +74,6 @@ body {
     place-items: center;
 }
 
-/* Saldo em Destaque */
 .balance-hero {
     text-align: center;
     display: flex;
@@ -169,7 +167,6 @@ body {
     color: #ffffff;
 }
 
-/* Seções e Cartões */
 .section-row {
     display: flex;
     align-items: center;
@@ -288,7 +285,6 @@ body {
     cursor: pointer;
 }
 
-/* Gaveta do Gráfico */
 .chart-drawer-box {
     background: var(--surface-card);
     border: 1px solid var(--surface-line);
@@ -297,7 +293,6 @@ body {
     height: 220px;
 }
 
-/* Lista de Lançamentos */
 .tx-list {
     display: flex;
     flex-direction: column;
@@ -389,7 +384,6 @@ body {
     font-size: 0.9rem;
 }
 
-/* Barra Inferior Fixa */
 .bottom-dock {
     position: fixed;
     bottom: 0;
@@ -421,7 +415,6 @@ body {
     color: #ffffff;
 }
 
-/* Modais */
 .modal-backdrop {
     position: fixed;
     inset: 0;
@@ -595,7 +588,6 @@ body {
     cursor: pointer;
 }
 
-/* Resultado do Simulador */
 .sim-result {
     margin-top: 1rem;
     padding: 0.9rem;
@@ -612,7 +604,6 @@ body {
 .sim-badge-warn { color: var(--amber); font-weight: 700; }
 .sim-badge-danger { color: var(--rose); font-weight: 700; }
 
-/* Toasts na Interface */
 .toast-stack {
     position: fixed;
     bottom: 74px;
