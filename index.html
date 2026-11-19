@@ -9,7 +9,7 @@
     <title>FluxoPróximo | Minha carteira</title>
 
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#151624">
+    <meta name="theme-color" content="#1e1f30">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 
@@ -17,254 +17,278 @@
 </head>
 <body>
     <div class="wallet-shell">
-        <!-- Cabeçalho Superior -->
-        <header class="top-bar">
-            <button id="btn-mes-anterior-top" class="icon-circle-btn" type="button" title="Mês anterior" aria-label="Mês anterior">‹</button>
-            <h1 class="top-title">Minha carteira</h1>
-            <button id="btn-mes-seguinte-top" class="icon-circle-btn" type="button" title="Próximo mês" aria-label="Próximo mês">›</button>
+        <!-- Topo estilo imagem: botão esquerdo, título central, sino/alerta direito com badge -->
+        <header class="top-header">
+            <button id="btn-mes-anterior-top" class="header-sq-btn" type="button" title="Mês anterior" aria-label="Mês anterior">‹</button>
+            <div class="header-center-group">
+                <h1 class="header-title">Minha carteira</h1>
+                <input type="month" id="consulta-mes" class="header-month-input" aria-label="Mês de consulta">
+            </div>
+            <button id="btn-mes-seguinte-top" class="header-sq-btn badge-host" type="button" title="Próximo mês" aria-label="Próximo mês">
+                <span>›</span>
+                <span id="badge-qtd-itens" class="notif-badge">0</span>
+            </button>
         </header>
 
-        <!-- Comutador Principal: Visão Geral / Resumo & Cartão -->
-        <div class="top-tabs" role="tablist">
-            <button id="tab-visao" class="top-tab active" type="button" role="tab" aria-selected="true">Visão geral</button>
-            <button id="tab-cartao" class="top-tab" type="button" role="tab" aria-selected="false">Resumo &amp; Cartão</button>
+        <!-- Comutador Principal estilo imagem: "My icons" / "My Card" -> "Visão geral" / "Meu cartão" -->
+        <div class="segment-top" role="tablist">
+            <button id="tab-visao" class="segment-top-btn active" type="button" role="tab" aria-selected="true">Visão geral</button>
+            <button id="tab-cartao" class="segment-top-btn" type="button" role="tab" aria-selected="false">Meu cartão</button>
         </div>
 
-        <!-- Linha de Indicadores de Categorias -->
-        <div class="pills-strip" id="pills-strip" aria-label="Filtro rápido por categoria">
-            <button type="button" class="pill-tag active" data-cat="TODAS">
-                <span class="dot dot-orange"></span> Todas
+        <!-- Faixa de categorias com pontos coloridos (estilo BTC: 29% / ETH: 24% / ADA: 16%) -->
+        <div class="metrics-strip" id="pills-strip" aria-label="Categorias e distribuição">
+            <button type="button" class="metric-chip active" data-cat="TODAS">
+                <span class="chip-dot dot-orange"></span>
+                <span>Todas</span>
             </button>
         </div>
 
-        <!-- Mês Selecionado e Renda Base -->
-        <div class="period-strip">
-            <input type="month" id="consulta-mes" class="month-field" aria-label="Mês de consulta">
-            <button id="btn-toggle-renda" class="link-action" type="button">Renda base</button>
-        </div>
-
-        <form id="form-usuario" class="renda-form hidden">
-            <input type="number" id="salario" class="dark-input" step="0.01" min="0" inputmode="decimal" placeholder="Renda mensal (ex: 3500.00)" required>
-            <button type="submit" class="btn-gradient-sm">Salvar</button>
-            <button type="button" id="btn-cancelar-renda" class="btn-muted-sm">Fechar</button>
+        <!-- Formulário inline para editar renda base -->
+        <form id="form-usuario" class="renda-drawer hidden">
+            <input type="number" id="salario" class="app-input" step="0.01" min="0" inputmode="decimal" placeholder="Renda mensal (ex: 3500.00)" required>
+            <button type="submit" class="btn-grad-action">Salvar</button>
+            <button type="button" id="btn-cancelar-renda" class="btn-ghost-action">Fechar</button>
         </form>
 
-        <!-- VISTA 1: Anel Central + Ações Rápidas + Lista de Lançamentos -->
-        <section id="vista-visao" class="view-panel">
-            <div class="ring-stage">
-                <div class="glow-ring">
-                    <div class="ring-inner">
-                        <span class="ring-sub">Saldo livre</span>
-                        <strong id="dash-saldo" class="ring-amount">R$ 0,00</strong>
-                        <span id="dash-renda-sub" class="ring-meta">Renda: R$ 0,00</span>
+        <!-- TELA 1: Anel Circular Gradiente + 4 Ações Rápidas + Lista de Lançamentos -->
+        <section id="vista-visao" class="screen-panel">
+            <div class="donut-hero">
+                <div class="donut-ring">
+                    <div class="donut-hole">
+                        <span class="donut-label">Saldo livre</span>
+                        <strong id="dash-saldo" class="donut-value">R$ 0,00</strong>
+                        <span id="dash-renda-sub" class="donut-sub">Renda: R$ 0,00</span>
                     </div>
                 </div>
             </div>
 
-            <div class="quick-actions-grid">
-                <button id="btn-abrir-lancamento" class="quick-btn" type="button">
-                    <span class="quick-icon">↙</span>
-                    <span>Novo</span>
+            <!-- 4 Botões de Ação estilo Receive / Send / To buy / Change -->
+            <div class="action-row-4">
+                <button id="btn-abrir-lancamento" class="action-tile" type="button">
+                    <span class="action-tile-icon">↙</span>
+                    <span class="action-tile-text">Novo</span>
                 </button>
-                <button id="btn-abrir-simulador" class="quick-btn" type="button">
-                    <span class="quick-icon">↗</span>
-                    <span>Simular</span>
+                <button id="btn-abrir-simulador" class="action-tile" type="button">
+                    <span class="action-tile-icon">↗</span>
+                    <span class="action-tile-text">Simular</span>
                 </button>
-                <button id="btn-abrir-nova-cat-rapida" class="quick-btn" type="button">
-                    <span class="quick-icon">＋</span>
-                    <span>Categoria</span>
+                <button id="btn-toggle-renda" class="action-tile" type="button">
+                    <span class="action-tile-icon">＋</span>
+                    <span class="action-tile-text">Renda</span>
                 </button>
-                <button id="btn-alternar-grafico" class="quick-btn" type="button">
-                    <span class="quick-icon">◎</span>
-                    <span>Gráfico</span>
+                <button id="btn-alternar-grafico" class="action-tile" type="button">
+                    <span class="action-tile-icon">◎</span>
+                    <span class="action-tile-text">Gráfico</span>
                 </button>
             </div>
 
-            <div id="grafico-box" class="chart-card hidden">
+            <div id="grafico-box" class="chart-panel hidden">
                 <canvas id="categoryChart"></canvas>
             </div>
 
-            <div class="list-section">
-                <div class="list-header">
-                    <span>Lançamentos</span>
-                    <span id="dash-despesas-label" class="list-total">R$ 0,00</span>
+            <!-- Lista de Lançamentos estilo Assets (ícone esquerdo, título/subtítulo, valor/detalhe direito) -->
+            <div class="list-block">
+                <div class="list-top-meta">
+                    <span class="list-heading">Lançamentos</span>
+                    <div class="list-right-tools">
+                        <button id="btn-abrir-nova-cat-rapida" class="mini-filter-btn" type="button">+ Categoria</button>
+                        <span id="dash-despesas-label" class="list-sum">R$ 0,00</span>
+                    </div>
                 </div>
 
-                <div id="lista-despesas-corpo" class="tx-stack"></div>
+                <div id="lista-despesas-corpo" class="items-list"></div>
 
-                <div id="empty-state" class="empty-note hidden">
+                <div id="empty-state" class="empty-card hidden">
                     Sem lançamentos registrados neste mês.
                 </div>
             </div>
         </section>
 
-        <!-- VISTA 2: Destaque de Renda + Cartão Gradiente + Histórico -->
-        <section id="vista-cartao" class="view-panel hidden">
-            <div class="balance-header-row">
-                <div class="balance-header-text">
-                    <div id="dash-renda-destaque" class="big-figure">R$ 0,00</div>
-                    <div id="dash-saldo-destaque" class="sub-figure">Saldo livre: R$ 0,00</div>
+        <!-- TELA 2: Saldo/Renda Destaque + Cartão Gradiente Laranja/Rosa/Roxo + Abas + Histórico -->
+        <section id="vista-cartao" class="screen-panel hidden">
+            <div class="card-screen-head">
+                <div class="card-screen-balance">
+                    <div id="dash-renda-destaque" class="card-balance-main">R$ 0,00</div>
+                    <div id="dash-saldo-destaque" class="card-balance-sub">Saldo livre: R$ 0,00</div>
                 </div>
-                <div class="mini-tools">
-                    <button id="btn-editar-renda-cartao" class="tool-btn" type="button" title="Editar renda" aria-label="Editar renda">✎</button>
-                    <button id="btn-novo-lancamento-cartao" class="tool-btn" type="button" title="Novo lançamento" aria-label="Novo lançamento">＋</button>
+                <div class="card-screen-actions">
+                    <button id="btn-editar-renda-cartao" class="round-tool-btn" type="button" title="Editar renda" aria-label="Editar renda">✎</button>
+                    <button id="btn-abrir-simulador-cartao" class="round-tool-btn" type="button" title="Simular compra" aria-label="Simular compra">↗</button>
+                    <button id="btn-novo-lancamento-cartao" class="round-tool-btn" type="button" title="Novo lançamento" aria-label="Novo lançamento">＋</button>
                 </div>
             </div>
 
-            <div class="gradient-card">
-                <div class="gcard-top">
-                    <span class="gcard-chip">◈ FLUXOPRÓXIMO</span>
-                    <span class="gcard-wave">)))</span>
+            <!-- Cartão Gradiente estilo BANEXCOIN -->
+            <div class="visual-card">
+                <div class="vcard-row-top">
+                    <span class="vcard-brand">◈ FLUXOPRÓXIMO</span>
+                    <span class="vcard-nfc">)))</span>
                 </div>
-                <div class="gcard-number" id="gcard-despesas">R$ 0,00</div>
-                <div class="gcard-bottom">
-                    <div class="gcard-stat">
-                        <small>MÊS</small>
+                <div class="vcard-balance" id="gcard-despesas">R$ 0,00</div>
+                <div class="vcard-row-bottom">
+                    <div class="vcard-field">
+                        <small>Mês</small>
                         <span id="gcard-mes">--/----</span>
                     </div>
-                    <div class="gcard-stat gcard-stat-center">
-                        <small>ITENS</small>
+                    <div class="vcard-field">
+                        <small>Lançamentos</small>
                         <span id="gcard-qtd">0</span>
                     </div>
-                    <div class="circles-mark" aria-hidden="true">
+                    <div class="vcard-emblem" aria-hidden="true">
                         <span></span><span></span>
                     </div>
                 </div>
             </div>
 
-            <div class="sub-tabs">
-                <button type="button" class="sub-tab active" data-filtro-tipo="TODOS">Todos</button>
-                <button type="button" class="sub-tab" data-filtro-tipo="PARCELADA">Parcelados</button>
-                <button type="button" class="sub-tab" data-filtro-tipo="FIXA">Contas fixas</button>
+            <!-- 3 Abas estilo Deposit / Withdraw / Purchases -->
+            <div class="filter-tabs-3">
+                <button type="button" class="filter-tab-btn active" data-filtro-tipo="TODOS">Todos</button>
+                <button type="button" class="filter-tab-btn" data-filtro-tipo="PARCELADA">Parcelados</button>
+                <button type="button" class="filter-tab-btn" data-filtro-tipo="FIXA">Contas fixas</button>
             </div>
 
-            <div id="lista-despesas-cartao" class="tx-stack"></div>
+            <div id="lista-despesas-cartao" class="items-list"></div>
         </section>
 
-        <!-- Barra Inferior Fixa -->
-        <nav class="bottom-nav" aria-label="Navegação inferior">
-            <button id="nav-home" class="nav-item active" type="button" title="Início" aria-label="Início">⌂</button>
-            <button id="nav-card" class="nav-item" type="button" title="Cartão e resumo" aria-label="Cartão e resumo">▣</button>
-            <button id="nav-center-add" class="nav-fab" type="button" title="Adicionar lançamento" aria-label="Adicionar lançamento">⇅</button>
-            <button id="nav-sim" class="nav-item" type="button" title="Simulador" aria-label="Simulador">◈</button>
-            <button id="nav-income" class="nav-item" type="button" title="Renda" aria-label="Renda">⚙</button>
+        <!-- Barra Inferior Fixa estilo imagem com botão central gradiente -->
+        <nav class="dock-bar" aria-label="Navegação principal">
+            <button id="nav-home" class="dock-item active" type="button" title="Início" aria-label="Início">
+                <span class="dock-glyph">⌂</span>
+                <span class="dock-label">Início</span>
+            </button>
+            <button id="nav-card" class="dock-item" type="button" title="Cartão" aria-label="Cartão">
+                <span class="dock-glyph">▣</span>
+                <span class="dock-label">Cartão</span>
+            </button>
+            <button id="nav-center-add" class="dock-center-fab" type="button" title="Novo lançamento" aria-label="Novo lançamento">
+                ⇅
+            </button>
+            <button id="nav-sim" class="dock-item" type="button" title="Simulador" aria-label="Simulador">
+                <span class="dock-glyph">↗</span>
+                <span class="dock-label">Simular</span>
+            </button>
+            <button id="nav-income" class="dock-item" type="button" title="Renda" aria-label="Renda">
+                <span class="dock-glyph">⚙</span>
+                <span class="dock-label">Renda</span>
+            </button>
         </nav>
     </div>
 
-    <!-- Modal: Criar / Editar Lançamento -->
-    <div id="modal-form-lancamento" class="modal-overlay hidden">
-        <div class="modal-box">
-            <div class="modal-head">
+    <!-- Modal: Novo / Editar Lançamento -->
+    <div id="modal-form-lancamento" class="sheet-backdrop hidden">
+        <div class="sheet-card">
+            <div class="sheet-head">
                 <h2 id="modal-lancamento-titulo">Adicionar lançamento</h2>
-                <button type="button" class="btn-close-modal btn-fechar" aria-label="Fechar">✕</button>
+                <button type="button" class="sheet-close btn-fechar" aria-label="Fechar">✕</button>
             </div>
-            <form id="form-despesa" class="modal-form">
-                <div class="seg-switch">
-                    <button type="button" id="seg-parcelada" class="seg-btn active">Parcelada</button>
-                    <button type="button" id="seg-fixa" class="seg-btn">Conta fixa</button>
+            <form id="form-despesa" class="sheet-form">
+                <div class="sheet-seg">
+                    <button type="button" id="seg-parcelada" class="sheet-seg-btn active">Parcelada</button>
+                    <button type="button" id="seg-fixa" class="sheet-seg-btn">Conta fixa</button>
                     <input type="radio" id="tipo-parcelada" name="tipoDespesa" value="parcelada" checked hidden>
                     <input type="radio" id="tipo-fixa" name="tipoDespesa" value="fixa" hidden>
                 </div>
 
-                <div class="form-field">
+                <div class="sheet-field">
                     <label for="descricao">Descrição</label>
-                    <input type="text" id="descricao" class="dark-input" placeholder="Ex: Monitor, Academia..." required>
+                    <input type="text" id="descricao" class="app-input" placeholder="Ex: Monitor, Academia..." required>
                 </div>
 
-                <div id="grupo-parcelada" class="form-grid-2">
-                    <div class="form-field">
+                <div id="grupo-parcelada" class="sheet-row-2">
+                    <div class="sheet-field">
                         <label for="valor-total">Valor da parcela (R$)</label>
-                        <input type="number" id="valor-total" class="dark-input" step="0.01" min="0.01" inputmode="decimal" required>
+                        <input type="number" id="valor-total" class="app-input" step="0.01" min="0.01" inputmode="decimal" required>
                     </div>
-                    <div class="form-field">
+                    <div class="sheet-field">
                         <label for="parcelas">Parcelas</label>
-                        <input type="number" id="parcelas" class="dark-input" min="1" step="1" inputmode="numeric" required>
+                        <input type="number" id="parcelas" class="app-input" min="1" step="1" inputmode="numeric" required>
                     </div>
                 </div>
 
-                <div id="grupo-fixa" class="form-field hidden">
+                <div id="grupo-fixa" class="sheet-field hidden">
                     <label for="valor-mensal-fixo">Valor mensal (R$)</label>
-                    <input type="number" id="valor-mensal-fixo" class="dark-input" step="0.01" min="0.01" inputmode="decimal">
+                    <input type="number" id="valor-mensal-fixo" class="app-input" step="0.01" min="0.01" inputmode="decimal">
                 </div>
 
-                <div class="form-grid-2">
-                    <div class="form-field">
+                <div class="sheet-row-2">
+                    <div class="sheet-field">
                         <label for="mes-inicio">Mês de início</label>
-                        <input type="month" id="mes-inicio" class="dark-input" required>
+                        <input type="month" id="mes-inicio" class="app-input" required>
                     </div>
-                    <div class="form-field">
+                    <div class="sheet-field">
                         <label for="categoria">Categoria</label>
-                        <div class="select-plus-row">
-                            <select id="categoria" class="dark-input" required></select>
-                            <button type="button" id="btn-abrir-nova-cat" class="btn-plus-dark" title="Nova categoria" aria-label="Nova categoria">+</button>
+                        <div class="select-plus-wrap">
+                            <select id="categoria" class="app-input" required></select>
+                            <button type="button" id="btn-abrir-nova-cat" class="plus-sq-btn" title="Nova categoria" aria-label="Nova categoria">+</button>
                         </div>
                     </div>
                 </div>
 
-                <button type="submit" id="btn-submit-lancamento" class="btn-gradient-full">Salvar lançamento</button>
+                <button type="submit" id="btn-submit-lancamento" class="btn-grad-full">Salvar lançamento</button>
             </form>
         </div>
     </div>
 
     <!-- Modal: Nova Categoria -->
-    <div id="modal-nova-categoria" class="modal-overlay hidden">
-        <div class="modal-box modal-sm">
-            <div class="modal-head">
+    <div id="modal-nova-categoria" class="sheet-backdrop hidden">
+        <div class="sheet-card sheet-compact">
+            <div class="sheet-head">
                 <h2>Nova categoria</h2>
-                <button type="button" class="btn-close-modal btn-fechar" aria-label="Fechar">✕</button>
+                <button type="button" class="sheet-close btn-fechar" aria-label="Fechar">✕</button>
             </div>
-            <form id="form-nova-categoria" class="modal-form">
-                <div class="form-field">
+            <form id="form-nova-categoria" class="sheet-form">
+                <div class="sheet-field">
                     <label for="input-nova-cat">Nome da categoria</label>
-                    <input type="text" id="input-nova-cat" class="dark-input" placeholder="Ex: Saúde, Estudos..." required>
+                    <input type="text" id="input-nova-cat" class="app-input" placeholder="Ex: Saúde, Estudos..." required>
                 </div>
-                <button type="submit" class="btn-gradient-full">Criar categoria</button>
+                <button type="submit" class="btn-grad-full">Criar categoria</button>
             </form>
         </div>
     </div>
 
-    <!-- Modal: Simulador -->
-    <div id="modal-form-simulador" class="modal-overlay hidden">
-        <div class="modal-box">
-            <div class="modal-head">
+    <!-- Modal: Simulador de Compra -->
+    <div id="modal-form-simulador" class="sheet-backdrop hidden">
+        <div class="sheet-card">
+            <div class="sheet-head">
                 <h2>Simulador de compra</h2>
-                <button type="button" class="btn-close-modal btn-fechar" aria-label="Fechar">✕</button>
+                <button type="button" class="sheet-close btn-fechar" aria-label="Fechar">✕</button>
             </div>
-            <form id="form-simulador" class="modal-form">
-                <div class="form-field">
+            <form id="form-simulador" class="sheet-form">
+                <div class="sheet-field">
                     <label for="sim-valor">Valor da parcela (R$)</label>
-                    <input type="number" id="sim-valor" class="dark-input" step="0.01" min="0.01" inputmode="decimal" required>
+                    <input type="number" id="sim-valor" class="app-input" step="0.01" min="0.01" inputmode="decimal" required>
                 </div>
-                <div class="form-grid-2">
-                    <div class="form-field">
+                <div class="sheet-row-2">
+                    <div class="sheet-field">
                         <label for="sim-parcelas">Parcelas</label>
-                        <input type="number" id="sim-parcelas" class="dark-input" min="1" step="1" inputmode="numeric" required>
+                        <input type="number" id="sim-parcelas" class="app-input" min="1" step="1" inputmode="numeric" required>
                     </div>
-                    <div class="form-field">
+                    <div class="sheet-field">
                         <label for="sim-mes">A partir de</label>
-                        <input type="month" id="sim-mes" class="dark-input" required>
+                        <input type="month" id="sim-mes" class="app-input" required>
                     </div>
                 </div>
-                <button type="submit" class="btn-gradient-full">Calcular impacto</button>
+                <button type="submit" class="btn-grad-full">Calcular impacto</button>
             </form>
-            <div id="resultado-simulacao" class="sim-box hidden"></div>
+            <div id="resultado-simulacao" class="sim-output hidden"></div>
         </div>
     </div>
 
-    <!-- Modal de Confirmação Interno -->
-    <div id="modal-confirmacao" class="modal-overlay hidden">
-        <div class="modal-box modal-sm">
+    <!-- Modal de Confirmação na Interface -->
+    <div id="modal-confirmacao" class="sheet-backdrop hidden">
+        <div class="sheet-card sheet-compact">
             <h2 id="modal-titulo">Excluir lançamento?</h2>
-            <p id="modal-mensagem" class="modal-desc">Esta ação recalcula o saldo do mês e as projeções seguintes.</p>
-            <div class="modal-actions-row">
-                <button type="button" id="btn-modal-cancelar" class="btn-muted-sm">Cancelar</button>
-                <button type="button" id="btn-modal-confirmar" class="btn-danger-sm">Excluir</button>
+            <p id="modal-mensagem" class="sheet-copy">Esta ação recalcula o saldo do mês e as projeções seguintes.</p>
+            <div class="sheet-confirm-row">
+                <button type="button" id="btn-modal-cancelar" class="btn-ghost-action">Cancelar</button>
+                <button type="button" id="btn-modal-confirmar" class="btn-danger-action">Excluir</button>
             </div>
         </div>
     </div>
 
     <!-- Notificações na Interface -->
-    <div id="toast-container" class="toast-area" aria-live="polite"></div>
+    <div id="toast-container" class="toast-stack" aria-live="polite"></div>
 
     <script type="module" src="app.js"></script>
 </body>

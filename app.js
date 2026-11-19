@@ -22,7 +22,7 @@ if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("./sw.js").catch(() => {});
 }
 
-// Bloqueio adicional de zoom por gesto de pinça e duplo toque (comportamento app)
+// Travamento de zoom por pinça e duplo toque para experiência de app mobile
 document.addEventListener("gesturestart", (e) => e.preventDefault(), { passive: false });
 document.addEventListener("gesturechange", (e) => e.preventDefault(), { passive: false });
 document.addEventListener("gestureend", (e) => e.preventDefault(), { passive: false });
@@ -44,12 +44,13 @@ document.addEventListener("touchend", (e) => {
 
 const USER_ID = "meu_usuario_principal";
 const formatadorReal = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
-const CORES_GRAFICO = ["#ff7a3d", "#e44b8d", "#6c5ce7", "#38d9a9", "#fcc419", "#74c0fc", "#b197fc", "#63e6be"];
+const CORES_GRAFICO = ["#ff8533", "#38d9a9", "#7b5cff", "#e44b8d", "#fcc419", "#74c0fc", "#b197fc", "#63e6be"];
 const DOT_CLASSES = ["dot-orange", "dot-cyan", "dot-purple", "dot-pink"];
 
 let meuGrafico = null;
 let idEdicaoAtual = null;
 let lancamentosMes = [];
+let categoriasCache = [];
 let categoriaAtiva = "TODAS";
 let filtroTipoCartao = "TODOS";
 
@@ -72,13 +73,13 @@ function fecharModal(id) {
 
 document.querySelectorAll(".btn-fechar").forEach(btn => {
     btn.addEventListener("click", (e) => {
-        e.target.closest(".modal-overlay").classList.add("hidden");
+        e.target.closest(".sheet-backdrop").classList.add("hidden");
     });
 });
 
-document.querySelectorAll(".modal-overlay").forEach(overlay => {
-    overlay.addEventListener("click", (e) => {
-        if (e.target === overlay) overlay.classList.add("hidden");
+document.querySelectorAll(".sheet-backdrop").forEach(backdrop => {
+    backdrop.addEventListener("click", (e) => {
+        if (e.target === backdrop) backdrop.classList.add("hidden");
     });
 });
 
@@ -128,9 +129,9 @@ function formatarCategoria(texto) {
     return limpo.charAt(0).toUpperCase() + limpo.slice(1);
 }
 
-// Navegação de Abas e Vista
-function alternarVista(vista) {
-    const isCartao = vista === "cartao";
+// Alternância entre "Visão geral" e "Meu cartão"
+function alternarTela(tela) {
+    const isCartao = tela === "cartao";
     document.getElementById("vista-visao").classList.toggle("hidden", isCartao);
     document.getElementById("vista-cartao").classList.toggle("hidden", !isCartao);
 
@@ -143,12 +144,12 @@ function alternarVista(vista) {
     document.getElementById("nav-card").classList.toggle("active", isCartao);
 }
 
-document.getElementById("tab-visao").addEventListener("click", () => alternarVista("visao"));
-document.getElementById("tab-cartao").addEventListener("click", () => alternarVista("cartao"));
-document.getElementById("nav-home").addEventListener("click", () => alternarVista("visao"));
-document.getElementById("nav-card").addEventListener("click", () => alternarVista("cartao"));
+document.getElementById("tab-visao").addEventListener("click", () => alternarTela("visao"));
+document.getElementById("tab-cartao").addEventListener("click", () => alternarTela("cartao"));
+document.getElementById("nav-home").addEventListener("click", () => alternarTela("visao"));
+document.getElementById("nav-card").addEventListener("click", () => alternarTela("cartao"));
 
-// Categorias e Pills
+// Categorias e Chips
 async function obterCategoriasUnicas() {
     const padroes = ["Moradia", "Alimentação", "Tecnologia", "Assinaturas", "Lazer", "Outros"];
     const snap = await getDoc(doc(db, "usuarios", USER_ID));
@@ -156,49 +157,52 @@ async function obterCategoriasUnicas() {
     return [...new Set([...padroes, ...salvas])];
 }
 
-function renderizarPills(categorias, selecionarValor = null) {
+function renderizarChipsCategorias(porCategoria = {}) {
     const strip = document.getElementById("pills-strip");
     strip.innerHTML = "";
 
+    const totalGasto = Object.values(porCategoria).reduce((acc, v) => acc + v, 0);
+
     const btnTodas = document.createElement("button");
     btnTodas.type = "button";
-    btnTodas.className = `pill-tag ${categoriaAtiva === "TODAS" ? "active" : ""}`;
-    btnTodas.innerHTML = `<span class="dot dot-orange"></span> Todas`;
+    btnTodas.className = `metric-chip ${categoriaAtiva === "TODAS" ? "active" : ""}`;
+    btnTodas.innerHTML = `<span class="chip-dot dot-orange"></span><span>Todas</span>`;
     btnTodas.onclick = () => {
         categoriaAtiva = "TODAS";
-        renderizarPills(categorias, selecionarValor);
+        renderizarChipsCategorias(porCategoria);
         renderizarListas();
     };
     strip.appendChild(btnTodas);
 
-    categorias.forEach((cat, idx) => {
+    categoriasCache.forEach((cat, idx) => {
+        const valorCat = porCategoria[cat] || 0;
+        const pct = totalGasto > 0 ? Math.round((valorCat / totalGasto) * 100) : 0;
         const btn = document.createElement("button");
         btn.type = "button";
-        btn.className = `pill-tag ${categoriaAtiva === cat ? "active" : ""}`;
+        btn.className = `metric-chip ${categoriaAtiva === cat ? "active" : ""}`;
         const dotClass = DOT_CLASSES[idx % DOT_CLASSES.length];
-        btn.innerHTML = `<span class="dot ${dotClass}"></span> ${cat}`;
+        btn.innerHTML = `<span class="chip-dot ${dotClass}"></span><span>${cat}: ${pct}%</span>`;
         btn.onclick = () => {
             categoriaAtiva = categoriaAtiva === cat ? "TODAS" : cat;
-            renderizarPills(categorias, selecionarValor);
+            renderizarChipsCategorias(porCategoria);
             renderizarListas();
         };
         strip.appendChild(btn);
     });
 }
 
-async function sincronizarCategoriasUI(selecionarValor = null) {
+async function popularSelectCategoria(selecionarValor = null) {
     const select = document.getElementById("categoria");
     try {
-        const unicas = await obterCategoriasUnicas();
+        categoriasCache = await obterCategoriasUnicas();
         select.innerHTML = `<option value="" disabled selected>Selecione...</option>`;
-        unicas.forEach(cat => {
+        categoriasCache.forEach(cat => {
             const opt = document.createElement("option");
             opt.value = cat;
             opt.textContent = cat;
             select.appendChild(opt);
         });
         if (selecionarValor) select.value = selecionarValor;
-        renderizarPills(unicas, selecionarValor);
     } catch {
         showToast("Erro ao carregar categorias.");
     }
@@ -227,7 +231,8 @@ document.getElementById("form-nova-categoria").addEventListener("submit", async 
             await setDoc(userRef, { categorias }, { merge: true });
         }
 
-        await sincronizarCategoriasUI(catFormatada);
+        await popularSelectCategoria(catFormatada);
+        renderizarChipsCategorias();
         fecharModal("modal-nova-categoria");
         showToast("Categoria criada.");
     } catch {
@@ -235,7 +240,7 @@ document.getElementById("form-nova-categoria").addEventListener("submit", async 
     }
 });
 
-// Alternância Parcelada / Conta Fixa
+// Tipo de lançamento: Parcelada / Conta fixa
 function aplicarTipoDespesa(tipo) {
     const isFixa = tipo === "fixa";
     document.getElementById("tipo-fixa").checked = isFixa;
@@ -255,7 +260,7 @@ function aplicarTipoDespesa(tipo) {
 document.getElementById("seg-parcelada").addEventListener("click", () => aplicarTipoDespesa("parcelada"));
 document.getElementById("seg-fixa").addEventListener("click", () => aplicarTipoDespesa("fixa"));
 
-// Abrir Modal de Lançamento
+// Novo lançamento
 async function abrirNovoLancamento() {
     idEdicaoAtual = null;
     document.getElementById("form-despesa").reset();
@@ -263,7 +268,7 @@ async function abrirNovoLancamento() {
     document.getElementById("modal-lancamento-titulo").textContent = "Adicionar lançamento";
     document.getElementById("btn-submit-lancamento").textContent = "Salvar lançamento";
     aplicarTipoDespesa("parcelada");
-    await sincronizarCategoriasUI();
+    await popularSelectCategoria();
     abrirModal("modal-form-lancamento");
 }
 
@@ -286,6 +291,7 @@ function abrirSimulador() {
 }
 
 document.getElementById("btn-abrir-simulador").addEventListener("click", abrirSimulador);
+document.getElementById("btn-abrir-simulador-cartao").addEventListener("click", abrirSimulador);
 document.getElementById("nav-sim").addEventListener("click", abrirSimulador);
 
 // Renda Base
@@ -326,31 +332,34 @@ document.getElementById("form-usuario").addEventListener("submit", async (e) => 
     }
 });
 
-// Sub-abas de tipo na vista Cartão
-document.querySelectorAll(".sub-tab").forEach(btn => {
+// Abas da tela do cartão
+document.querySelectorAll(".filter-tab-btn").forEach(btn => {
     btn.addEventListener("click", () => {
-        document.querySelectorAll(".sub-tab").forEach(b => b.classList.remove("active"));
+        document.querySelectorAll(".filter-tab-btn").forEach(b => b.classList.remove("active"));
         btn.classList.add("active");
         filtroTipoCartao = btn.getAttribute("data-filtro-tipo");
         renderizarListas();
     });
 });
 
-function criarElementoLinha(item) {
+function criarCardTransacao(item) {
     const row = document.createElement("div");
-    row.className = "tx-row";
+    row.className = "tx-card";
     row.innerHTML = `
-        <div class="tx-main">
-            <div class="tx-avatar">${item.categoria.charAt(0).toUpperCase()}</div>
-            <div class="tx-info">
-                <span class="tx-name">${item.descricao}</span>
-                <span class="tx-cat">${item.subtitulo}</span>
+        <div class="tx-left-group">
+            <div class="tx-badge-icon">${item.categoria.charAt(0).toUpperCase()}</div>
+            <div class="tx-texts">
+                <span class="tx-title-line">${item.descricao}</span>
+                <span class="tx-sub-line">${item.subtitulo}</span>
             </div>
         </div>
-        <div class="tx-side">
-            <span class="tx-val">-${formatadorReal.format(item.valorParcela)}</span>
-            <button type="button" class="tx-act btn-editar" data-id="${item.id}" title="Editar" aria-label="Editar">✎</button>
-            <button type="button" class="tx-act btn-excluir" data-id="${item.id}" title="Excluir" aria-label="Excluir">✕</button>
+        <div class="tx-right-group">
+            <div class="tx-amount-col">
+                <span class="tx-price">${formatadorReal.format(item.valorParcela)}</span>
+                <span class="tx-kind">${item.isFixa ? "Fixa" : "Parcela"}</span>
+            </div>
+            <button type="button" class="tx-action-btn btn-editar" data-id="${item.id}" title="Editar" aria-label="Editar">✎</button>
+            <button type="button" class="tx-action-btn btn-excluir" data-id="${item.id}" title="Excluir" aria-label="Excluir">✕</button>
         </div>
     `;
     return row;
@@ -375,17 +384,17 @@ function renderizarListas() {
     listaCartao.innerHTML = "";
 
     emptyEl.classList.toggle("hidden", baseCat.length > 0);
-    baseCat.forEach(item => listaVisao.appendChild(criarElementoLinha(item)));
-    baseCartao.forEach(item => listaCartao.appendChild(criarElementoLinha(item)));
+    baseCat.forEach(item => listaVisao.appendChild(criarCardTransacao(item)));
+    baseCartao.forEach(item => listaCartao.appendChild(criarCardTransacao(item)));
 }
 
-// Dashboard Mensal
+// Atualização Mensal
 async function atualizarDashboardMensal() {
     const mesConsulta = document.getElementById("consulta-mes").value;
     if (!mesConsulta) return;
 
     try {
-        await sincronizarCategoriasUI();
+        categoriasCache = await obterCategoriasUnicas();
 
         const userSnap = await getDoc(doc(db, "usuarios", USER_ID));
         const rendaMensal = userSnap.exists() ? Number(userSnap.data().salarioBase || 0) : 0;
@@ -416,7 +425,7 @@ async function atualizarDashboardMensal() {
             porCategoria[cat] = (porCategoria[cat] || 0) + valor;
 
             const subtitulo = d.isFixa
-                ? `${cat} · Fixa`
+                ? `${cat} · Conta fixa`
                 : `${cat} · Parcela ${diffMeses(d.mesInicio, mesConsulta)}/${d.parcelasTotal}`;
 
             lancamentosMes.push({
@@ -429,12 +438,15 @@ async function atualizarDashboardMensal() {
             });
         });
 
+        renderizarChipsCategorias(porCategoria);
+
         const saldoLivre = rendaMensal - totalDespesas;
         const [anoStr, mesStr] = mesConsulta.split("-");
 
         document.getElementById("dash-saldo").textContent = formatadorReal.format(saldoLivre);
         document.getElementById("dash-renda-sub").textContent = `Renda: ${formatadorReal.format(rendaMensal)}`;
         document.getElementById("dash-despesas-label").textContent = formatadorReal.format(totalDespesas);
+        document.getElementById("badge-qtd-itens").textContent = String(lancamentosMes.length);
 
         document.getElementById("dash-renda-destaque").textContent = formatadorReal.format(rendaMensal);
         document.getElementById("dash-saldo-destaque").textContent = `Saldo livre: ${formatadorReal.format(saldoLivre)}`;
@@ -462,11 +474,11 @@ async function atualizarDashboardMensal() {
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    cutout: "72%",
+                    cutout: "74%",
                     plugins: {
                         legend: {
                             position: "right",
-                            labels: { color: "#f5f6fa", boxWidth: 10, font: { size: 11 } }
+                            labels: { color: "#f4f5f9", boxWidth: 10, font: { size: 11 } }
                         }
                     }
                 }
@@ -541,7 +553,7 @@ document.getElementById("form-despesa").addEventListener("submit", async (e) => 
     }
 });
 
-// Delegação de Editar / Excluir nas Listas
+// Editar / Excluir nas listas
 async function tratarCliqueLista(e) {
     const btnExcluir = e.target.closest(".btn-excluir");
     const btnEditar = e.target.closest(".btn-editar");
@@ -572,7 +584,7 @@ async function tratarCliqueLista(e) {
 
             document.getElementById("descricao").value = d.descricao;
             document.getElementById("mes-inicio").value = d.mesInicio;
-            await sincronizarCategoriasUI(d.categoria);
+            await popularSelectCategoria(d.categoria);
 
             if (d.isFixa) {
                 aplicarTipoDespesa("fixa");
