@@ -3,7 +3,6 @@
     --bg-mid: #0f6e8c;
     --bg-bottom: #0b4f6c;
     --surface-card: rgba(255, 255, 255, 0.14);
-    --surface-card-strong: rgba(255, 255, 255, 0.2);
     --surface-line: rgba(255, 255, 255, 0.16);
     --text-main: #ffffff;
     --text-soft: rgba(255, 255, 255, 0.72);
@@ -179,8 +178,7 @@ body {
 }
 
 .section-heading,
-.section-link,
-.section-sub {
+.section-link {
     font-size: 0.72rem;
     font-weight: 600;
     letter-spacing: 0.14em;
@@ -193,6 +191,24 @@ body {
     cursor: pointer;
     text-decoration: underline;
     text-underline-offset: 3px;
+}
+
+.filter-select {
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid var(--surface-line);
+    color: var(--text-soft);
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    border-radius: 999px;
+    padding: 0.25rem 0.65rem;
+    outline: none;
+    cursor: pointer;
+}
+
+.filter-select option {
+    background: var(--sheet-bg);
+    color: #ffffff;
 }
 
 .cards-carousel {

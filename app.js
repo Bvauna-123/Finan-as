@@ -28,6 +28,7 @@ const CORES_GRAFICO = ["#66d9e8", "#8ce99a", "#ffd43b", "#ff8787", "#b197fc", "#
 
 let meuGrafico = null;
 let idEdicaoAtual = null;
+let lancamentosMesCache = [];
 
 function showToast(mensagem) {
     const container = document.getElementById("toast-container");
@@ -79,7 +80,7 @@ function confirmarNaInterface(titulo, mensagem, onConfirm) {
     };
 }
 
-// Helpers numéricos de mês ("YYYY-MM") sem risco de fuso horário
+// Helpers numéricos de mês ("YYYY-MM")
 function parseMes(ym) {
     const [ano, mes] = ym.split("-").map(Number);
     return { ano, mes };
@@ -106,14 +107,20 @@ function formatarCategoria(texto) {
 }
 
 // Categorias
+async function obterCategoriasUnicas() {
+    const padroes = ["Moradia", "Alimentação", "Tecnologia", "Assinaturas", "Lazer", "Outros"];
+    const snap = await getDoc(doc(db, "usuarios", USER_ID));
+    const salvas = snap.exists() && Array.isArray(snap.data().categorias) ? snap.data().categorias : [];
+    return [...new Set([...padroes, ...salvas])];
+}
+
 async function carregarCategoriasNoSelect(selecionarValor = null) {
     const select = document.getElementById("categoria");
-    const padroes = ["Moradia", "Alimentação", "Tecnologia", "Assinaturas", "Lazer", "Outros"];
+    const filtro = document.getElementById("filtro-categoria");
+    const valorFiltroAtual = filtro.value || "TODAS";
 
     try {
-        const snap = await getDoc(doc(db, "usuarios", USER_ID));
-        const salvas = snap.exists() && Array.isArray(snap.data().categorias) ? snap.data().categorias : [];
-        const unicas = [...new Set([...padroes, ...salvas])];
+        const unicas = await obterCategoriasUnicas();
 
         select.innerHTML = `<option value="" disabled selected>Selecione...</option>`;
         unicas.forEach(cat => {
@@ -122,8 +129,16 @@ async function carregarCategoriasNoSelect(selecionarValor = null) {
             opt.textContent = cat;
             select.appendChild(opt);
         });
-
         if (selecionarValor) select.value = selecionarValor;
+
+        filtro.innerHTML = `<option value="TODAS">TODAS</option>`;
+        unicas.forEach(cat => {
+            const opt = document.createElement("option");
+            opt.value = cat;
+            opt.textContent = cat.toUpperCase();
+            filtro.appendChild(opt);
+        });
+        filtro.value = [...filtro.options].some(o => o.value === valorFiltroAtual) ? valorFiltroAtual : "TODAS";
     } catch {
         showToast("Não foi possível carregar as categorias.");
     }
@@ -183,7 +198,7 @@ async function abrirNovoLancamento() {
     document.getElementById("form-despesa").reset();
     document.getElementById("mes-inicio").value = document.getElementById("consulta-mes").value;
     document.getElementById("modal-lancamento-titulo").textContent = "Adicionar lançamento";
-    document.getElementById("btn-submit-lancamento").textContent = "Guardar lançamento";
+    document.getElementById("btn-submit-lancamento").textContent = "Salvar lançamento";
     aplicarTipoDespesa("parcelada");
     await carregarCategoriasNoSelect();
     abrirModal("modal-form-lancamento");
@@ -240,19 +255,54 @@ document.getElementById("form-usuario").addEventListener("submit", async (e) => 
         showToast("Renda base atualizada.");
         await atualizarDashboardMensal();
     } catch {
-        showToast("Erro ao guardar a renda.");
+        showToast("Erro ao salvar a renda.");
     }
 });
+
+// Renderização da Lista com Filtro de Categoria
+function renderizarListaLancamentos() {
+    const listaEl = document.getElementById("lista-despesas-corpo");
+    const emptyEl = document.getElementById("empty-state");
+    const catFiltro = document.getElementById("filtro-categoria").value || "TODAS";
+
+    const itensFiltrados = catFiltro === "TODAS"
+        ? lancamentosMesCache
+        : lancamentosMesCache.filter(item => item.categoria === catFiltro);
+
+    listaEl.innerHTML = "";
+    emptyEl.classList.toggle("hidden", itensFiltrados.length > 0);
+
+    itensFiltrados.forEach(item => {
+        const row = document.createElement("div");
+        row.className = "tx-item";
+        row.innerHTML = `
+            <div class="tx-left">
+                <div class="tx-circle">${item.categoria.charAt(0).toUpperCase()}</div>
+                <div class="tx-meta">
+                    <span class="tx-title">${item.descricao}</span>
+                    <span class="tx-sub">${item.subtitulo}</span>
+                </div>
+            </div>
+            <div class="tx-right">
+                <span class="tx-value">-${formatadorReal.format(item.valorParcela)}</span>
+                <button type="button" class="tx-icon-btn btn-editar" data-id="${item.id}" title="Editar">✎</button>
+                <button type="button" class="tx-icon-btn btn-excluir" data-id="${item.id}" title="Excluir">✕</button>
+            </div>
+        `;
+        listaEl.appendChild(row);
+    });
+}
+
+document.getElementById("filtro-categoria").addEventListener("change", renderizarListaLancamentos);
 
 // Dashboard Mensal
 async function atualizarDashboardMensal() {
     const mesConsulta = document.getElementById("consulta-mes").value;
     if (!mesConsulta) return;
 
-    const listaEl = document.getElementById("lista-despesas-corpo");
-    const emptyEl = document.getElementById("empty-state");
-
     try {
+        await carregarCategoriasNoSelect();
+
         const userSnap = await getDoc(doc(db, "usuarios", USER_ID));
         const rendaMensal = userSnap.exists() ? Number(userSnap.data().salarioBase || 0) : 0;
 
@@ -264,9 +314,8 @@ async function atualizarDashboardMensal() {
         const snap = await getDocs(q);
 
         let totalDespesas = 0;
-        let qtd = 0;
         const porCategoria = {};
-        listaEl.innerHTML = "";
+        lancamentosMesCache = [];
 
         snap.forEach((docItem) => {
             const d = docItem.data();
@@ -276,43 +325,34 @@ async function atualizarDashboardMensal() {
 
             if (!ativa) return;
 
-            qtd++;
             const valor = Number(d.valorParcela || 0);
             totalDespesas += valor;
 
             const cat = d.categoria || "Outros";
             porCategoria[cat] = (porCategoria[cat] || 0) + valor;
 
-            const refTexto = d.isFixa
+            const subtitulo = d.isFixa
                 ? `${cat} · Fixa`
                 : `${cat} · Parcela ${diffMeses(d.mesInicio, mesConsulta)}/${d.parcelasTotal}`;
 
-            const row = document.createElement("div");
-            row.className = "tx-item";
-            row.innerHTML = `
-                <div class="tx-left">
-                    <div class="tx-circle">${cat.charAt(0).toUpperCase()}</div>
-                    <div class="tx-meta">
-                        <span class="tx-title">${d.descricao}</span>
-                        <span class="tx-sub">${refTexto}</span>
-                    </div>
-                </div>
-                <div class="tx-right">
-                    <span class="tx-value">-${formatadorReal.format(valor)}</span>
-                    <button type="button" class="tx-icon-btn btn-editar" data-id="${docItem.id}" title="Editar">✎</button>
-                    <button type="button" class="tx-icon-btn btn-excluir" data-id="${docItem.id}" title="Eliminar">✕</button>
-                </div>
-            `;
-            listaEl.appendChild(row);
+            lancamentosMesCache.push({
+                id: docItem.id,
+                descricao: d.descricao,
+                categoria: cat,
+                subtitulo,
+                valorParcela: valor
+            });
         });
 
+        const qtd = lancamentosMesCache.length;
         const saldoLivre = rendaMensal - totalDespesas;
+
         document.getElementById("dash-renda").textContent = formatadorReal.format(rendaMensal);
         document.getElementById("dash-despesas").textContent = formatadorReal.format(totalDespesas);
         document.getElementById("dash-saldo").textContent = formatadorReal.format(saldoLivre);
         document.getElementById("qtd-lancamentos-label").textContent = `${qtd} LANÇAMENTO${qtd === 1 ? "" : "S"}`;
 
-        emptyEl.classList.toggle("hidden", qtd > 0);
+        renderizarListaLancamentos();
 
         const ctx = document.getElementById("categoryChart").getContext("2d");
         if (meuGrafico) meuGrafico.destroy();
@@ -358,7 +398,7 @@ document.getElementById("btn-prev-month").addEventListener("click", () => mudarM
 document.getElementById("btn-next-month").addEventListener("click", () => mudarMes(1));
 document.getElementById("consulta-mes").addEventListener("change", atualizarDashboardMensal);
 
-// Salvar / Editar Lançamento
+// Salvar / Editar Lançamento (valor da parcela é o valor informado)
 document.getElementById("form-despesa").addEventListener("submit", async (e) => {
     e.preventDefault();
 
@@ -375,9 +415,9 @@ document.getElementById("form-despesa").addEventListener("submit", async (e) => 
         parcelasTotal = null;
         mesFim = null;
     } else {
-        valorTotal = parseFloat(document.getElementById("valor-total").value);
+        valorParcela = parseFloat(document.getElementById("valor-total").value);
         parcelasTotal = parseInt(document.getElementById("parcelas").value, 10);
-        valorParcela = valorTotal / parcelasTotal;
+        valorTotal = valorParcela * parcelasTotal;
         mesFim = somarMeses(mesInicio, parcelasTotal - 1);
     }
 
@@ -407,11 +447,11 @@ document.getElementById("form-despesa").addEventListener("submit", async (e) => 
         fecharModal("modal-form-lancamento");
         await atualizarDashboardMensal();
     } catch {
-        showToast("Erro ao guardar lançamento.");
+        showToast("Erro ao salvar lançamento.");
     }
 });
 
-// Editar / Eliminar na Lista
+// Editar / Excluir na Lista
 document.getElementById("lista-despesas-corpo").addEventListener("click", async (e) => {
     const btnExcluir = e.target.closest(".btn-excluir");
     const btnEditar = e.target.closest(".btn-editar");
@@ -419,15 +459,15 @@ document.getElementById("lista-despesas-corpo").addEventListener("click", async 
     if (btnExcluir) {
         const id = btnExcluir.getAttribute("data-id");
         confirmarNaInterface(
-            "Eliminar lançamento?",
+            "Excluir lançamento?",
             "O saldo do mês e as projeções serão recalculados.",
             async () => {
                 try {
                     await deleteDoc(doc(db, "transacoes", id));
-                    showToast("Lançamento eliminado.");
+                    showToast("Lançamento excluído.");
                     await atualizarDashboardMensal();
                 } catch {
-                    showToast("Erro ao eliminar lançamento.");
+                    showToast("Erro ao excluir lançamento.");
                 }
             }
         );
@@ -449,7 +489,7 @@ document.getElementById("lista-despesas-corpo").addEventListener("click", async 
                 document.getElementById("valor-mensal-fixo").value = d.valorParcela;
             } else {
                 aplicarTipoDespesa("parcelada");
-                document.getElementById("valor-total").value = d.valorTotal;
+                document.getElementById("valor-total").value = d.valorParcela;
                 document.getElementById("parcelas").value = d.parcelasTotal;
             }
 
@@ -462,15 +502,14 @@ document.getElementById("lista-despesas-corpo").addEventListener("click", async 
     }
 });
 
-// Simulador de Compra
+// Simulador de Compra (valor informado é o valor da parcela mensal)
 document.getElementById("form-simulador").addEventListener("submit", async (e) => {
     e.preventDefault();
-    const valorTotal = parseFloat(document.getElementById("sim-valor").value);
+    const valorNovaParcela = parseFloat(document.getElementById("sim-valor").value);
     const parcelas = parseInt(document.getElementById("sim-parcelas").value, 10);
     const mesInicio = document.getElementById("sim-mes").value;
     const box = document.getElementById("resultado-simulacao");
 
-    const valorNovaParcela = valorTotal / parcelas;
     box.classList.remove("hidden");
 
     try {

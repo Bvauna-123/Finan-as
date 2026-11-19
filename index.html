@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="pt-PT">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FluxoPróximo | Contas</title>
 
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#0d6e8a">
+    <meta name="theme-color" content="#0f6e8c">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 
@@ -17,7 +17,7 @@
         <header class="app-header">
             <div class="header-spacer"></div>
             <span class="header-title">CONTAS</span>
-            <button id="btn-editar-renda-top" class="avatar-btn" title="Editar renda base" aria-label="Editar renda base">
+            <button id="btn-editar-renda-top" class="avatar-btn" type="button" title="Editar renda base" aria-label="Editar renda base">
                 <span class="avatar-initial">FP</span>
             </button>
         </header>
@@ -27,14 +27,14 @@
             <h1 id="dash-saldo" class="hero-balance">R$ 0,00</h1>
 
             <div class="month-pill-nav">
-                <button id="btn-prev-month" class="month-btn" title="Mês anterior" aria-label="Mês anterior">‹</button>
+                <button id="btn-prev-month" class="month-btn" type="button" title="Mês anterior" aria-label="Mês anterior">‹</button>
                 <input type="month" id="consulta-mes" class="month-input" aria-label="Mês de consulta">
-                <button id="btn-next-month" class="month-btn" title="Próximo mês" aria-label="Próximo mês">›</button>
+                <button id="btn-next-month" class="month-btn" type="button" title="Próximo mês" aria-label="Próximo mês">›</button>
             </div>
 
             <form id="form-usuario" class="renda-inline-form hidden">
-                <input type="number" id="salario" class="inline-input" step="0.01" placeholder="Renda base (ex: 3500.00)" required>
-                <button type="submit" class="inline-btn-save">Guardar</button>
+                <input type="number" id="salario" class="inline-input" step="0.01" min="0" placeholder="Renda base (ex: 3500.00)" required>
+                <button type="submit" class="inline-btn-save">Salvar</button>
                 <button type="button" id="btn-cancelar-renda" class="inline-btn-cancel">Cancelar</button>
             </form>
         </section>
@@ -46,7 +46,7 @@
             </div>
 
             <div class="cards-carousel" id="cards-carousel">
-                <article class="glass-card card-accent-emerald" id="card-renda">
+                <article class="glass-card" id="card-renda">
                     <div class="card-top">
                         <span class="status-dot dot-emerald"></span>
                         <span class="card-brand">RENDA BASE</span>
@@ -58,7 +58,7 @@
                     </div>
                 </article>
 
-                <article class="glass-card card-accent-rose" id="card-despesas">
+                <article class="glass-card" id="card-despesas">
                     <div class="card-top">
                         <span class="status-dot dot-rose"></span>
                         <span class="card-brand">DESPESAS</span>
@@ -70,7 +70,7 @@
                     </div>
                 </article>
 
-                <article class="glass-card card-accent-cyan" id="card-simulador-atalho">
+                <article class="glass-card" id="card-simulador-atalho">
                     <div class="card-top">
                         <span class="status-dot dot-cyan"></span>
                         <span class="card-brand">SIMULADOR</span>
@@ -93,29 +93,23 @@
         <section class="transactions-section">
             <div class="section-row">
                 <span class="section-heading">LANÇAMENTOS DO MÊS</span>
-                <span id="filtro-status-label" class="section-sub">TODOS</span>
+                <select id="filtro-categoria" class="filter-select" aria-label="Filtrar por categoria">
+                    <option value="TODAS">TODAS</option>
+                </select>
             </div>
 
             <div id="lista-despesas-corpo" class="tx-list"></div>
 
             <div id="empty-state" class="empty-box hidden">
-                <p>Sem lançamentos registados neste mês.</p>
+                <p>Sem lançamentos registrados neste mês.</p>
             </div>
         </section>
 
         <nav class="bottom-dock" aria-label="Navegação principal">
-            <button id="nav-lancamento" class="dock-btn active" type="button" title="Novo lançamento" aria-label="Novo lançamento">
-                ⇄
-            </button>
-            <button id="nav-grafico" class="dock-btn" type="button" title="Distribuição por categoria" aria-label="Distribuição por categoria">
-                ▮▮▮
-            </button>
-            <button id="nav-simulador" class="dock-btn" type="button" title="Simular compra" aria-label="Simular compra">
-                🔔
-            </button>
-            <button id="nav-renda" class="dock-btn" type="button" title="Configurar renda" aria-label="Configurar renda">
-                ⚙
-            </button>
+            <button id="nav-lancamento" class="dock-btn active" type="button" title="Novo lançamento" aria-label="Novo lançamento">⇄</button>
+            <button id="nav-grafico" class="dock-btn" type="button" title="Distribuição por categoria" aria-label="Distribuição por categoria">▮▮▮</button>
+            <button id="nav-simulador" class="dock-btn" type="button" title="Simular compra" aria-label="Simular compra">🔔</button>
+            <button id="nav-renda" class="dock-btn" type="button" title="Configurar renda" aria-label="Configurar renda">⚙</button>
         </nav>
     </div>
 
@@ -142,7 +136,7 @@
 
                 <div id="grupo-parcelada" class="field-row">
                     <div class="field-group">
-                        <label for="valor-total">Valor total (R$)</label>
+                        <label for="valor-total">Valor da parcela (R$)</label>
                         <input type="number" id="valor-total" class="sheet-input" step="0.01" min="0.01" required>
                     </div>
                     <div class="field-group">
@@ -170,7 +164,7 @@
                     </div>
                 </div>
 
-                <button type="submit" id="btn-submit-lancamento" class="sheet-submit">Guardar lançamento</button>
+                <button type="submit" id="btn-submit-lancamento" class="sheet-submit">Salvar lançamento</button>
             </form>
         </div>
     </div>
@@ -201,7 +195,7 @@
             </div>
             <form id="form-simulador" class="sheet-form">
                 <div class="field-group">
-                    <label for="sim-valor">Valor da compra (R$)</label>
+                    <label for="sim-valor">Valor da parcela (R$)</label>
                     <input type="number" id="sim-valor" class="sheet-input" step="0.01" min="0.01" required>
                 </div>
                 <div class="field-row">
@@ -220,19 +214,19 @@
         </div>
     </div>
 
-    <!-- Modal de Confirmação Interno (sem confirm() nativo) -->
+    <!-- Modal de Confirmação na Interface -->
     <div id="modal-confirmacao" class="modal-backdrop hidden">
         <div class="modal-sheet modal-compact">
-            <h2 id="modal-titulo">Eliminar lançamento?</h2>
+            <h2 id="modal-titulo">Excluir lançamento?</h2>
             <p id="modal-mensagem" class="modal-copy">Esta ação vai recalcular os saldos deste mês e dos seguintes.</p>
             <div class="confirm-actions">
                 <button type="button" id="btn-modal-cancelar" class="btn-ghost-light">Cancelar</button>
-                <button type="button" id="btn-modal-confirmar" class="btn-danger-solid">Eliminar</button>
+                <button type="button" id="btn-modal-confirmar" class="btn-danger-solid">Excluir</button>
             </div>
         </div>
     </div>
 
-    <!-- Avisos na Interface (sem alert() nativo) -->
+    <!-- Notificações na Interface -->
     <div id="toast-container" class="toast-stack" aria-live="polite"></div>
 
     <script type="module" src="app.js"></script>
