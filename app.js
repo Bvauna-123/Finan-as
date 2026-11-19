@@ -1,444 +1,544 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, collection, addDoc, doc, setDoc, getDoc, updateDoc, query, where, getDocs, deleteDoc, enableIndexedDbPersistence } 
-from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {
+    getFirestore, collection, addDoc, doc, setDoc, getDoc,
+    updateDoc, query, where, getDocs, deleteDoc, enableIndexedDbPersistence
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDTS3SboPCzvNOpEjtMhqiXFxHZxd7FiXo",
-  authDomain: "financas-62b92.firebaseapp.com",
-  projectId: "financas-62b92",
-  storageBucket: "financas-62b92.firebasestorage.app",
-  messagingSenderId: "310565146773",
-  appId: "1:310565146773:web:01cbfcbb3bc4f97b624b9c",
-  measurementId: "G-NFCBYPB4NJ"
+    apiKey: "AIzaSyDTS3SboPCzvNOpEjtMhqiXFxHZxd7FiXo",
+    authDomain: "financas-62b92.firebaseapp.com",
+    projectId: "financas-62b92",
+    storageBucket: "financas-62b92.firebasestorage.app",
+    messagingSenderId: "310565146773",
+    appId: "1:310565146773:web:01cbfcbb3bc4f97b624b9c",
+    measurementId: "G-NFCBYPB4NJ"
 };
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-enableIndexedDbPersistence(db).catch(err => console.warn('Offline PWA indisponível', err));
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(err => console.error(err));
+enableIndexedDbPersistence(db).catch(() => {});
+if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("./sw.js").catch(() => {});
+}
 
 const USER_ID = "meu_usuario_principal";
-const formatadorReal = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+const formatadorReal = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+const CORES_GRAFICO = ["#66d9e8", "#8ce99a", "#ffd43b", "#ff8787", "#b197fc", "#ffa94d", "#63e6be", "#74c0fc"];
+
 let meuGrafico = null;
-let idEdicaoAtual = null; 
-const PALETA_CORES = ['#4f46e5', '#ec4899', '#f59e0b', '#10b981', '#06b6d4', '#f43f5e', '#8b5cf6', '#14b8a6', '#f97316', '#84cc16'];
+let idEdicaoAtual = null;
 
-function showToast(mensagem, icon = '✅') {
-    const container = document.getElementById('toast-container');
-    const toast = document.createElement('div');
-    toast.className = 'toast';
-    toast.innerHTML = `<span>${icon}</span> <span>${mensagem}</span>`;
-    container.appendChild(toast);
-    setTimeout(() => { toast.style.animation = 'slideIn 0.3s reverse forwards'; setTimeout(() => toast.remove(), 300); }, 3000);
+function showToast(mensagem) {
+    const container = document.getElementById("toast-container");
+    const item = document.createElement("div");
+    item.className = "toast-msg";
+    item.textContent = mensagem;
+    container.appendChild(item);
+    setTimeout(() => item.remove(), 2800);
 }
 
-function toggleModal(modalId, action) {
-    const modal = document.getElementById(modalId);
-    if (action === 'open') modal.classList.remove('hidden');
-    else modal.classList.add('hidden');
+function abrirModal(id) {
+    document.getElementById(id).classList.remove("hidden");
 }
 
-document.querySelectorAll('.btn-fechar').forEach(btn => {
-    btn.addEventListener('click', (e) => e.target.closest('.modal-overlay').classList.add('hidden'));
+function fecharModal(id) {
+    document.getElementById(id).classList.add("hidden");
+}
+
+document.querySelectorAll(".btn-fechar").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+        e.target.closest(".modal-backdrop").classList.add("hidden");
+    });
 });
 
-function showConfirmModal(onConfirmCallback) {
-    toggleModal('modal-confirmacao', 'open');
-    const btnConfirmar = document.getElementById('btn-modal-confirmar');
-    const btnCancelar = document.getElementById('btn-modal-cancelar');
+document.querySelectorAll(".modal-backdrop").forEach(backdrop => {
+    backdrop.addEventListener("click", (e) => {
+        if (e.target === backdrop) backdrop.classList.add("hidden");
+    });
+});
 
-    const fechar = () => { toggleModal('modal-confirmacao', 'close'); btnConfirmar.onclick = null; btnCancelar.onclick = null; };
-    btnCancelar.onclick = fechar;
-    btnConfirmar.onclick = () => { fechar(); onConfirmCallback(); };
+function confirmarNaInterface(titulo, mensagem, onConfirm) {
+    document.getElementById("modal-titulo").textContent = titulo;
+    document.getElementById("modal-mensagem").textContent = mensagem;
+    abrirModal("modal-confirmacao");
+
+    const btnOk = document.getElementById("btn-modal-confirmar");
+    const btnCancel = document.getElementById("btn-modal-cancelar");
+
+    const limpar = () => {
+        fecharModal("modal-confirmacao");
+        btnOk.onclick = null;
+        btnCancel.onclick = null;
+    };
+
+    btnCancel.onclick = limpar;
+    btnOk.onclick = async () => {
+        limpar();
+        await onConfirm();
+    };
 }
 
-// Carregar Categorias no <select> dinamicamente
+// Helpers numéricos de mês ("YYYY-MM") sem risco de fuso horário
+function parseMes(ym) {
+    const [ano, mes] = ym.split("-").map(Number);
+    return { ano, mes };
+}
+
+function somarMeses(ym, delta) {
+    const { ano, mes } = parseMes(ym);
+    const total = (ano * 12 + (mes - 1)) + delta;
+    const novoAno = Math.floor(total / 12);
+    const novoMes = (total % 12) + 1;
+    return `${String(novoAno).padStart(4, "0")}-${String(novoMes).padStart(2, "0")}`;
+}
+
+function diffMeses(inicioYm, atualYm) {
+    const a = parseMes(inicioYm);
+    const b = parseMes(atualYm);
+    return (b.ano - a.ano) * 12 + (b.mes - a.mes) + 1;
+}
+
+function formatarCategoria(texto) {
+    const limpo = texto.trim();
+    if (!limpo) return "";
+    return limpo.charAt(0).toUpperCase() + limpo.slice(1);
+}
+
+// Categorias
 async function carregarCategoriasNoSelect(selecionarValor = null) {
     const select = document.getElementById("categoria");
-    let categoriasPadroes = ['Moradia', 'Alimentação', 'Tecnologia', 'Assinaturas', 'Lazer', 'Outros'];
-    
+    const padroes = ["Moradia", "Alimentação", "Tecnologia", "Assinaturas", "Lazer", "Outros"];
+
     try {
-        const userSnap = await getDoc(doc(db, "usuarios", USER_ID));
-        let categoriasSalvas = userSnap.exists() && userSnap.data().categorias ? userSnap.data().categorias : [];
-        
-        // Junta padrões e salvas sem duplicar
-        const unicas = [...new Set([...categoriasPadroes, ...categoriasSalvas])];
-        
-        select.innerHTML = '<option value="" disabled selected>Selecione...</option>';
+        const snap = await getDoc(doc(db, "usuarios", USER_ID));
+        const salvas = snap.exists() && Array.isArray(snap.data().categorias) ? snap.data().categorias : [];
+        const unicas = [...new Set([...padroes, ...salvas])];
+
+        select.innerHTML = `<option value="" disabled selected>Selecione...</option>`;
         unicas.forEach(cat => {
-            select.innerHTML += `<option value="${cat}">${cat}</option>`;
+            const opt = document.createElement("option");
+            opt.value = cat;
+            opt.textContent = cat;
+            select.appendChild(opt);
         });
 
-        if (selecionarValor) {
-            select.value = selecionarValor;
-        }
-    } catch (e) { console.error("Erro ao carregar categorias", e); }
+        if (selecionarValor) select.value = selecionarValor;
+    } catch {
+        showToast("Não foi possível carregar as categorias.");
+    }
 }
 
-// Botão para abrir o modal de nova categoria
-document.getElementById('btn-abrir-nova-cat').addEventListener('click', () => {
-    toggleModal('modal-nova-categoria', 'open');
+document.getElementById("btn-abrir-nova-cat").addEventListener("click", () => {
+    document.getElementById("input-nova-cat").value = "";
+    abrirModal("modal-nova-categoria");
 });
 
-// Salvar Nova Categoria Criada pelo Usuário
-document.getElementById('form-nova-categoria').addEventListener('submit', async (e) => {
+document.getElementById("form-nova-categoria").addEventListener("submit", async (e) => {
     e.preventDefault();
-    const inputCat = document.getElementById('input-nova-cat').value.trim();
-    if(!inputCat) return;
-
-    const catFormatada = inputCat.charAt(0).toUpperCase() + inputCat.slice(1).toLowerCase();
+    const catFormatada = formatarCategoria(document.getElementById("input-nova-cat").value);
+    if (!catFormatada) return;
 
     try {
         const userRef = doc(db, "usuarios", USER_ID);
-        const userSnap = await getDoc(userRef);
-        let categorias = userSnap.exists() && userSnap.data().categorias ? userSnap.data().categorias : [];
+        const snap = await getDoc(userRef);
+        const categorias = snap.exists() && Array.isArray(snap.data().categorias) ? snap.data().categorias : [];
 
         if (!categorias.includes(catFormatada)) {
             categorias.push(catFormatada);
-            await setDoc(userRef, { categorias: categorias }, { merge: true });
+            await setDoc(userRef, { categorias }, { merge: true });
         }
 
-        await carregarCategoriasNoSelect(catFormatada); // Já seleciona a nova criada
-        document.getElementById('input-nova-cat').value = '';
-        toggleModal('modal-nova-categoria', 'close');
-        showToast("Categoria criada!", "🏷️");
-    } catch (error) {
-        showToast("Erro ao criar categoria.", "❌");
+        await carregarCategoriasNoSelect(catFormatada);
+        fecharModal("modal-nova-categoria");
+        showToast("Categoria criada.");
+    } catch {
+        showToast("Erro ao criar categoria.");
     }
 });
 
-// Abrir modal de Lançamento (Modo Criação)
-document.getElementById('btn-abrir-lancamento').addEventListener('click', async () => {
+// Alternância Parcelada / Conta Fixa
+function aplicarTipoDespesa(tipo) {
+    const isFixa = tipo === "fixa";
+    document.getElementById("tipo-fixa").checked = isFixa;
+    document.getElementById("tipo-parcelada").checked = !isFixa;
+
+    document.getElementById("seg-fixa").classList.toggle("active", isFixa);
+    document.getElementById("seg-parcelada").classList.toggle("active", !isFixa);
+
+    document.getElementById("grupo-fixa").classList.toggle("hidden", !isFixa);
+    document.getElementById("grupo-parcelada").classList.toggle("hidden", isFixa);
+
+    document.getElementById("valor-total").required = !isFixa;
+    document.getElementById("parcelas").required = !isFixa;
+    document.getElementById("valor-mensal-fixo").required = isFixa;
+}
+
+document.getElementById("seg-parcelada").addEventListener("click", () => aplicarTipoDespesa("parcelada"));
+document.getElementById("seg-fixa").addEventListener("click", () => aplicarTipoDespesa("fixa"));
+
+// Abrir Modal de Lançamento
+async function abrirNovoLancamento() {
     idEdicaoAtual = null;
     document.getElementById("form-despesa").reset();
-    document.getElementById("modal-lancamento-titulo").textContent = "Adicionar Lançamento";
-    document.getElementById("btn-submit-lancamento").textContent = "Salvar Lançamento";
-    document.getElementById("tipo-parcelada").click();
+    document.getElementById("mes-inicio").value = document.getElementById("consulta-mes").value;
+    document.getElementById("modal-lancamento-titulo").textContent = "Adicionar lançamento";
+    document.getElementById("btn-submit-lancamento").textContent = "Guardar lançamento";
+    aplicarTipoDespesa("parcelada");
     await carregarCategoriasNoSelect();
-    toggleModal('modal-form-lancamento', 'open');
+    abrirModal("modal-form-lancamento");
+}
+
+document.getElementById("nav-lancamento").addEventListener("click", abrirNovoLancamento);
+
+// Gráfico
+function alternarGrafico() {
+    document.getElementById("painel-grafico").classList.toggle("hidden");
+}
+
+document.getElementById("btn-toggle-grafico").addEventListener("click", alternarGrafico);
+document.getElementById("nav-grafico").addEventListener("click", alternarGrafico);
+
+// Simulador
+function abrirSimulador() {
+    document.getElementById("sim-mes").value = document.getElementById("consulta-mes").value;
+    document.getElementById("resultado-simulacao").classList.add("hidden");
+    abrirModal("modal-form-simulador");
+}
+
+document.getElementById("btn-abrir-simulador-card").addEventListener("click", abrirSimulador);
+document.getElementById("nav-simulador").addEventListener("click", abrirSimulador);
+
+// Renda Base
+function abrirEdicaoRenda() {
+    document.getElementById("form-usuario").classList.remove("hidden");
+    document.getElementById("salario").focus();
+}
+
+document.getElementById("btn-editar-renda").addEventListener("click", abrirEdicaoRenda);
+document.getElementById("btn-editar-renda-top").addEventListener("click", abrirEdicaoRenda);
+document.getElementById("nav-renda").addEventListener("click", abrirEdicaoRenda);
+
+document.getElementById("btn-cancelar-renda").addEventListener("click", () => {
+    document.getElementById("form-usuario").classList.add("hidden");
 });
 
-document.getElementById('btn-abrir-simulador').addEventListener('click', () => toggleModal('modal-form-simulador', 'open'));
+document.getElementById("form-usuario").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const salario = parseFloat(document.getElementById("salario").value);
+    if (Number.isNaN(salario) || salario < 0) {
+        showToast("Informe um valor de renda válido.");
+        return;
+    }
 
-// Dashboard e Tabela
+    try {
+        await setDoc(doc(db, "usuarios", USER_ID), {
+            salarioBase: salario,
+            atualizadoEm: new Date().toISOString()
+        }, { merge: true });
+        document.getElementById("form-usuario").classList.add("hidden");
+        showToast("Renda base atualizada.");
+        await atualizarDashboardMensal();
+    } catch {
+        showToast("Erro ao guardar a renda.");
+    }
+});
+
+// Dashboard Mensal
 async function atualizarDashboardMensal() {
     const mesConsulta = document.getElementById("consulta-mes").value;
     if (!mesConsulta) return;
 
-    const tbody = document.getElementById("lista-despesas-corpo");
-    const emptyState = document.getElementById("empty-state");
-    
+    const listaEl = document.getElementById("lista-despesas-corpo");
+    const emptyEl = document.getElementById("empty-state");
+
     try {
         const userSnap = await getDoc(doc(db, "usuarios", USER_ID));
-        if (!userSnap.exists()) return; 
-        const rendaMensal = userSnap.data().salarioBase || 0;
+        const rendaMensal = userSnap.exists() ? Number(userSnap.data().salarioBase || 0) : 0;
+
+        if (userSnap.exists() && userSnap.data().salarioBase) {
+            document.getElementById("salario").value = rendaMensal;
+        }
 
         const q = query(collection(db, "transacoes"), where("userId", "==", USER_ID));
-        const querySnapshot = await getDocs(q);
-        
-        let totalDespesasMes = 0;
-        let countLancamentos = 0;
-        let gastosCategoria = {};
-        tbody.innerHTML = "";
+        const snap = await getDocs(q);
 
-        const dictCores = {}; 
-        let corIndex = 0;
+        let totalDespesas = 0;
+        let qtd = 0;
+        const porCategoria = {};
+        listaEl.innerHTML = "";
 
-        querySnapshot.forEach((documento) => {
-            const despesa = documento.data();
-            const ehAtivaNoMes = despesa.isFixa ? (mesConsulta >= despesa.mesInicio) : (mesConsulta >= despesa.mesInicio && mesConsulta <= despesa.mesFim);
+        snap.forEach((docItem) => {
+            const d = docItem.data();
+            const ativa = d.isFixa
+                ? mesConsulta >= d.mesInicio
+                : (mesConsulta >= d.mesInicio && mesConsulta <= d.mesFim);
 
-            if (ehAtivaNoMes) {
-                countLancamentos++;
-                totalDespesasMes += despesa.valorParcela;
-                
-                const cat = despesa.categoria || 'Outros';
-                if(gastosCategoria[cat] === undefined) gastosCategoria[cat] = 0;
-                gastosCategoria[cat] += despesa.valorParcela;
+            if (!ativa) return;
 
-                if(!dictCores[cat]) { dictCores[cat] = PALETA_CORES[corIndex % PALETA_CORES.length]; corIndex++; }
+            qtd++;
+            const valor = Number(d.valorParcela || 0);
+            totalDespesas += valor;
 
-                let progresso = despesa.isFixa ? "Fixa" : `${((new Date(mesConsulta + "-15").getFullYear() - new Date(despesa.mesInicio + "-15").getFullYear()) * 12) + (new Date(mesConsulta + "-15").getMonth() - new Date(despesa.mesInicio + "-15").getMonth()) + 1}/${despesa.parcelasTotal}`;
+            const cat = d.categoria || "Outros";
+            porCategoria[cat] = (porCategoria[cat] || 0) + valor;
 
-                const tr = document.createElement("tr");
-                tr.innerHTML = `
-                    <td>
-                        <strong>${despesa.descricao}</strong>
-                        <div class="text-muted text-sm mt-1">Ref: ${progresso}</div>
-                    </td>
-                    <td><span class="dynamic-badge" style="background-color: ${dictCores[cat]}">${cat}</span></td>
-                    <td style="font-weight: 600;">${formatadorReal.format(despesa.valorParcela)}</td>
-                    <td class="text-right">
-                        <button class="btn-icon btn-editar" data-id="${documento.id}" title="Editar">✏️</button>
-                        <button class="btn-icon btn-excluir" data-id="${documento.id}" title="Excluir" style="margin-left:8px;">🗑️</button>
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            }
+            const refTexto = d.isFixa
+                ? `${cat} · Fixa`
+                : `${cat} · Parcela ${diffMeses(d.mesInicio, mesConsulta)}/${d.parcelasTotal}`;
+
+            const row = document.createElement("div");
+            row.className = "tx-item";
+            row.innerHTML = `
+                <div class="tx-left">
+                    <div class="tx-circle">${cat.charAt(0).toUpperCase()}</div>
+                    <div class="tx-meta">
+                        <span class="tx-title">${d.descricao}</span>
+                        <span class="tx-sub">${refTexto}</span>
+                    </div>
+                </div>
+                <div class="tx-right">
+                    <span class="tx-value">-${formatadorReal.format(valor)}</span>
+                    <button type="button" class="tx-icon-btn btn-editar" data-id="${docItem.id}" title="Editar">✎</button>
+                    <button type="button" class="tx-icon-btn btn-excluir" data-id="${docItem.id}" title="Eliminar">✕</button>
+                </div>
+            `;
+            listaEl.appendChild(row);
         });
 
-        const ctx = document.getElementById('categoryChart').getContext('2d');
+        const saldoLivre = rendaMensal - totalDespesas;
+        document.getElementById("dash-renda").textContent = formatadorReal.format(rendaMensal);
+        document.getElementById("dash-despesas").textContent = formatadorReal.format(totalDespesas);
+        document.getElementById("dash-saldo").textContent = formatadorReal.format(saldoLivre);
+        document.getElementById("qtd-lancamentos-label").textContent = `${qtd} LANÇAMENTO${qtd === 1 ? "" : "S"}`;
+
+        emptyEl.classList.toggle("hidden", qtd > 0);
+
+        const ctx = document.getElementById("categoryChart").getContext("2d");
         if (meuGrafico) meuGrafico.destroy();
 
-        if (countLancamentos > 0) {
-            const labels = Object.keys(gastosCategoria);
-            const dataColors = labels.map(label => dictCores[label]);
-
+        const labels = Object.keys(porCategoria);
+        if (labels.length > 0) {
             meuGrafico = new Chart(ctx, {
-                type: 'doughnut',
+                type: "doughnut",
                 data: {
-                    labels: labels,
+                    labels,
                     datasets: [{
-                        data: Object.values(gastosCategoria),
-                        backgroundColor: dataColors,
-                        borderWidth: 0, hoverOffset: 4
+                        data: Object.values(porCategoria),
+                        backgroundColor: labels.map((_, idx) => CORES_GRAFICO[idx % CORES_GRAFICO.length]),
+                        borderWidth: 0
                     }]
                 },
-                options: { responsive: true, maintainAspectRatio: false, cutout: '75%', plugins: { legend: { display: false } } }
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: "72%",
+                    plugins: {
+                        legend: {
+                            position: "right",
+                            labels: { color: "#ffffff", boxWidth: 10, font: { size: 11 } }
+                        }
+                    }
+                }
             });
-            document.querySelector('.chart-container').classList.remove('hidden');
-            emptyState.classList.add('hidden');
-            document.querySelector('.modern-table').classList.remove('hidden');
-        } else {
-            document.querySelector('.chart-container').classList.add('hidden');
-            emptyState.classList.remove('hidden');
-            document.querySelector('.modern-table').classList.add('hidden');
         }
-
-        const saldoLivre = rendaMensal - totalDespesasMes;
-        document.getElementById("dash-renda").textContent = formatadorReal.format(rendaMensal);
-        document.getElementById("dash-despesas").textContent = formatadorReal.format(totalDespesasMes);
-        document.getElementById("dash-saldo").textContent = formatadorReal.format(saldoLivre);
-
-        const cardSaldo = document.getElementById("card-saldo");
-        if (saldoLivre < 0) {
-            cardSaldo.classList.remove('balance-positive'); cardSaldo.classList.add('balance-negative');
-        } else {
-            cardSaldo.classList.remove('balance-negative'); cardSaldo.classList.add('balance-positive');
-        }
-
-        document.getElementById("dashboard-mensal").classList.remove("hidden-smooth");
-        document.getElementById("dashboard-mensal").classList.add("show-smooth");
-
-    } catch (error) { showToast("Erro ao carregar dados.", "❌"); }
+    } catch {
+        showToast("Erro ao atualizar o painel.");
+    }
 }
 
 function mudarMes(delta) {
-    const input = document.getElementById('consulta-mes');
-    if(!input.value) return;
-    const date = new Date(input.value + '-15');
-    date.setMonth(date.getMonth() + delta);
-    input.value = date.toISOString().substring(0, 7);
+    const input = document.getElementById("consulta-mes");
+    if (!input.value) return;
+    input.value = somarMeses(input.value, delta);
     atualizarDashboardMensal();
 }
-document.getElementById('btn-prev-month').addEventListener('click', () => mudarMes(-1));
-document.getElementById('btn-next-month').addEventListener('click', () => mudarMes(1));
+
+document.getElementById("btn-prev-month").addEventListener("click", () => mudarMes(-1));
+document.getElementById("btn-next-month").addEventListener("click", () => mudarMes(1));
 document.getElementById("consulta-mes").addEventListener("change", atualizarDashboardMensal);
 
-// Inicialização
-async function inicializarApp() {
-    const hoje = new Date();
-    const mesAtual = hoje.getFullYear() + "-" + String(hoje.getMonth() + 1).padStart(2, '0');
-    if(!document.getElementById("consulta-mes").value) document.getElementById("consulta-mes").value = mesAtual;
-
-    try {
-        const userSnap = await getDoc(doc(db, "usuarios", USER_ID));
-        if (userSnap.exists() && userSnap.data().salarioBase) {
-            const renda = userSnap.data().salarioBase;
-            document.getElementById("renda-valor-display").textContent = formatadorReal.format(renda);
-            document.getElementById("renda-view").classList.remove("hidden");
-            document.getElementById("form-usuario").classList.add("hidden");
-            document.getElementById("btn-cancelar-renda").classList.remove("hidden");
-            atualizarDashboardMensal();
-        } else {
-            document.getElementById("renda-view").classList.add("hidden");
-            document.getElementById("form-usuario").classList.remove("hidden");
-        }
-    } catch (error) { console.error(error); }
-}
-
-document.getElementById("btn-editar-renda").addEventListener("click", () => {
-    document.getElementById("renda-view").classList.add("hidden");
-    document.getElementById("form-usuario").classList.remove("hidden");
-});
-document.getElementById("btn-cancelar-renda").addEventListener("click", () => {
-    document.getElementById("renda-view").classList.remove("hidden");
-    document.getElementById("form-usuario").classList.add("hidden");
-});
-
-document.querySelectorAll('input[name="tipoDespesa"]').forEach(radio => {
-    radio.addEventListener('change', (e) => {
-        const grupoParcelada = document.getElementById('grupo-parcelada');
-        const grupoFixa = document.getElementById('grupo-fixa');
-
-        if (e.target.value === 'fixa') {
-            grupoParcelada.classList.remove('show-smooth'); grupoParcelada.classList.add('hidden-smooth');
-            setTimeout(() => { grupoFixa.classList.remove('hidden-smooth'); grupoFixa.classList.add('show-smooth'); }, 200);
-            document.getElementById('valor-total').required = false; document.getElementById('parcelas').required = false;
-            document.getElementById('valor-mensal-fixo').required = true;
-        } else {
-            grupoFixa.classList.remove('show-smooth'); grupoFixa.classList.add('hidden-smooth');
-            setTimeout(() => { grupoParcelada.classList.remove('hidden-smooth'); grupoParcelada.classList.add('show-smooth'); }, 200);
-            document.getElementById('valor-total').required = true; document.getElementById('parcelas').required = true;
-            document.getElementById('valor-mensal-fixo').required = false;
-        }
-    });
-});
-
-document.getElementById('grupo-parcelada').classList.add('show-smooth');
-inicializarApp();
-
-// Submits
-document.getElementById("form-usuario").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const salario = parseFloat(document.getElementById("salario").value);
-    await setDoc(doc(db, "usuarios", USER_ID), { salarioBase: salario, atualizadoEm: new Date().toISOString() }, { merge: true });
-    showToast("Renda atualizada!", "💰");
-    inicializarApp();
-});
-
+// Salvar / Editar Lançamento
 document.getElementById("form-despesa").addEventListener("submit", async (e) => {
     e.preventDefault();
-    const descricao = document.getElementById("descricao").value;
+
+    const descricao = document.getElementById("descricao").value.trim();
     const mesInicio = document.getElementById("mes-inicio").value;
     const categoria = document.getElementById("categoria").value;
-    const isFixa = (document.querySelector('input[name="tipoDespesa"]:checked').value === 'fixa');
+    const isFixa = document.getElementById("tipo-fixa").checked;
 
     let valorParcela, valorTotal, parcelasTotal, mesFim;
 
     if (isFixa) {
         valorParcela = parseFloat(document.getElementById("valor-mensal-fixo").value);
-        valorTotal = null; parcelasTotal = null; mesFim = null;
+        valorTotal = null;
+        parcelasTotal = null;
+        mesFim = null;
     } else {
         valorTotal = parseFloat(document.getElementById("valor-total").value);
-        parcelasTotal = parseInt(document.getElementById("parcelas").value);
+        parcelasTotal = parseInt(document.getElementById("parcelas").value, 10);
         valorParcela = valorTotal / parcelasTotal;
-        const dataInicio = new Date(mesInicio + "-15T00:00:00");
-        const dataFim = new Date(dataInicio);
-        dataFim.setMonth(dataFim.getMonth() + (parcelasTotal - 1));
-        mesFim = dataFim.toISOString().substring(0, 7);
+        mesFim = somarMeses(mesInicio, parcelasTotal - 1);
     }
 
-    const payload = { userId: USER_ID, descricao, isFixa, valorTotal, parcelasTotal, valorParcela, mesInicio, mesFim, categoria, atualizadoEm: new Date().toISOString() };
+    const payload = {
+        userId: USER_ID,
+        descricao,
+        isFixa,
+        valorTotal,
+        parcelasTotal,
+        valorParcela,
+        mesInicio,
+        mesFim,
+        categoria,
+        atualizadoEm: new Date().toISOString()
+    };
 
     try {
         if (idEdicaoAtual) {
             await updateDoc(doc(db, "transacoes", idEdicaoAtual), payload);
-            showToast("Lançamento atualizado!", "✏️");
+            showToast("Lançamento atualizado.");
         } else {
             payload.dataCadastro = new Date().toISOString();
             await addDoc(collection(db, "transacoes"), payload);
-            showToast("Lançamento efetuado!", "✅");
+            showToast("Lançamento adicionado.");
         }
-        
-        document.getElementById("form-despesa").reset();
-        toggleModal('modal-form-lancamento', 'close');
-        atualizarDashboardMensal();
-    } catch (error) { showToast("Erro ao salvar.", "❌"); }
+
+        fecharModal("modal-form-lancamento");
+        await atualizarDashboardMensal();
+    } catch {
+        showToast("Erro ao guardar lançamento.");
+    }
 });
 
-// Ações da Tabela (Editar / Excluir)
+// Editar / Eliminar na Lista
 document.getElementById("lista-despesas-corpo").addEventListener("click", async (e) => {
-    const btnExcluir = e.target.closest('.btn-excluir');
-    const btnEditar = e.target.closest('.btn-editar');
+    const btnExcluir = e.target.closest(".btn-excluir");
+    const btnEditar = e.target.closest(".btn-editar");
 
     if (btnExcluir) {
-        showConfirmModal(async () => {
-            await deleteDoc(doc(db, "transacoes", btnExcluir.getAttribute("data-id")));
-            showToast("Removido com sucesso.", "🗑️");
-            atualizarDashboardMensal();
-        });
+        const id = btnExcluir.getAttribute("data-id");
+        confirmarNaInterface(
+            "Eliminar lançamento?",
+            "O saldo do mês e as projeções serão recalculados.",
+            async () => {
+                try {
+                    await deleteDoc(doc(db, "transacoes", id));
+                    showToast("Lançamento eliminado.");
+                    await atualizarDashboardMensal();
+                } catch {
+                    showToast("Erro ao eliminar lançamento.");
+                }
+            }
+        );
     }
 
     if (btnEditar) {
         idEdicaoAtual = btnEditar.getAttribute("data-id");
         try {
-            const docSnap = await getDoc(doc(db, "transacoes", idEdicaoAtual));
-            if (docSnap.exists()) {
-                const data = docSnap.data();
-                document.getElementById("descricao").value = data.descricao;
-                document.getElementById("mes-inicio").value = data.mesInicio;
-                
-                await carregarCategoriasNoSelect(data.categoria);
+            const snap = await getDoc(doc(db, "transacoes", idEdicaoAtual));
+            if (!snap.exists()) return;
+            const d = snap.data();
 
-                if(data.isFixa) {
-                    document.getElementById("tipo-fixa").click();
-                    document.getElementById("valor-mensal-fixo").value = data.valorParcela;
-                } else {
-                    document.getElementById("tipo-parcelada").click();
-                    document.getElementById("valor-total").value = data.valorTotal;
-                    document.getElementById("parcelas").value = data.parcelasTotal;
-                }
+            document.getElementById("descricao").value = d.descricao;
+            document.getElementById("mes-inicio").value = d.mesInicio;
+            await carregarCategoriasNoSelect(d.categoria);
 
-                document.getElementById("modal-lancamento-titulo").textContent = "Editar Lançamento";
-                document.getElementById("btn-submit-lancamento").textContent = "Atualizar Lançamento";
-                toggleModal('modal-form-lancamento', 'open');
+            if (d.isFixa) {
+                aplicarTipoDespesa("fixa");
+                document.getElementById("valor-mensal-fixo").value = d.valorParcela;
+            } else {
+                aplicarTipoDespesa("parcelada");
+                document.getElementById("valor-total").value = d.valorTotal;
+                document.getElementById("parcelas").value = d.parcelasTotal;
             }
-        } catch (error) { showToast("Erro ao carregar dados.", "❌"); }
+
+            document.getElementById("modal-lancamento-titulo").textContent = "Editar lançamento";
+            document.getElementById("btn-submit-lancamento").textContent = "Atualizar lançamento";
+            abrirModal("modal-form-lancamento");
+        } catch {
+            showToast("Erro ao carregar lançamento.");
+        }
     }
 });
 
-// Simulador
+// Simulador de Compra
 document.getElementById("form-simulador").addEventListener("submit", async (e) => {
     e.preventDefault();
     const valorTotal = parseFloat(document.getElementById("sim-valor").value);
-    const parcelas = parseInt(document.getElementById("sim-parcelas").value);
+    const parcelas = parseInt(document.getElementById("sim-parcelas").value, 10);
     const mesInicio = document.getElementById("sim-mes").value;
-    const resultadoBox = document.getElementById("resultado-simulacao");
+    const box = document.getElementById("resultado-simulacao");
+
     const valorNovaParcela = valorTotal / parcelas;
-    
-    resultadoBox.classList.remove("hidden-smooth"); resultadoBox.classList.add("show-smooth");
-    resultadoBox.innerHTML = "<p class='text-center'>Analisando cenários financeiros...</p>";
+    box.classList.remove("hidden");
 
     try {
         const userSnap = await getDoc(doc(db, "usuarios", USER_ID));
-        if (!userSnap.exists()) return;
-        const rendaMensal = userSnap.data().salarioBase;
-        
-        const q = query(collection(db, "transacoes"), where("userId", "==", USER_ID));
-        const querySnapshot = await getDocs(q);
-        const todasDespesas = [];
-        querySnapshot.forEach(doc => todasDespesas.push(doc.data()));
+        const rendaMensal = userSnap.exists() ? Number(userSnap.data().salarioBase || 0) : 0;
 
-        let menorSaldo = rendaMensal;
-        let mesMaisCritico = "";
-        let mesesNegativos = 0;
-        const dataInicio = new Date(mesInicio + "-15T00:00:00");
-
-        for (let i = 0; i < parcelas; i++) {
-            const dataSimulada = new Date(dataInicio);
-            dataSimulada.setMonth(dataSimulada.getMonth() + i);
-            const mesSimuladoStr = dataSimulada.toISOString().substring(0, 7);
-            
-            let despesasMes = 0;
-            todasDespesas.forEach(despesa => {
-                if (despesa.isFixa ? (mesSimuladoStr >= despesa.mesInicio) : (mesSimuladoStr >= despesa.mesInicio && mesSimuladoStr <= despesa.mesFim)) {
-                    despesasMes += despesa.valorParcela;
-                }
-            });
-            
-            const saldoNoMes = rendaMensal - (despesasMes + valorNovaParcela);
-            if (saldoNoMes < menorSaldo) { menorSaldo = saldoNoMes; mesMaisCritico = `${mesSimuladoStr.split('-')[1]}/${mesSimuladoStr.split('-')[0]}`; }
-            if(saldoNoMes < 0) mesesNegativos++;
+        if (rendaMensal <= 0) {
+            box.innerHTML = `<span class="sim-badge-warn">Defina primeiro a sua renda base para simular.</span>`;
+            return;
         }
 
-        const impactoRenda = ((valorNovaParcela / rendaMensal) * 100).toFixed(1);
-        let statusHtml = "";
-        
-        if (mesesNegativos > 0) statusHtml = `<div class="status-bar status-danger">⚠️ Compra Inviável! Déficit em ${mesesNegativos} meses.</div>`;
-        else if (menorSaldo < (rendaMensal * 0.1)) statusHtml = `<div class="status-bar status-warning">⚡ Atenção: Margem de sobra muito baixa no pior mês.</div>`;
-        else statusHtml = `<div class="status-bar status-safe">✅ Compra Segura! Margem confortável garantida.</div>`;
+        const q = query(collection(db, "transacoes"), where("userId", "==", USER_ID));
+        const snap = await getDocs(q);
+        const despesas = snap.docs.map(item => item.data());
 
-        resultadoBox.innerHTML = `
-            <h3 style="font-size: 1.1rem; color: var(--slate-900); border-bottom: 1px solid var(--slate-200); padding-bottom: 8px;">📊 Relatório Analítico</h3>
-            <div class="report-grid">
-                <div class="report-item"><span class="report-label">Valor da Parcela</span><span class="report-value">${formatadorReal.format(valorNovaParcela)}</span></div>
-                <div class="report-item"><span class="report-label">Impacto na Renda</span><span class="report-value text-rose">${impactoRenda}%</span></div>
-                <div class="report-item"><span class="report-label">Pior Cenário (Data)</span><span class="report-value">${mesMaisCritico}</span></div>
-                <div class="report-item"><span class="report-label">Saldo no Pior Cenário</span><span class="report-value ${menorSaldo < 0 ? 'text-rose' : 'text-emerald'}">${formatadorReal.format(menorSaldo)}</span></div>
-            </div>
-            ${statusHtml}
+        let menorSaldo = Infinity;
+        let mesCritico = mesInicio;
+        let mesesNegativos = 0;
+
+        for (let i = 0; i < parcelas; i++) {
+            const mesSim = somarMeses(mesInicio, i);
+            let gastoMes = 0;
+
+            despesas.forEach(d => {
+                const ativa = d.isFixa
+                    ? mesSim >= d.mesInicio
+                    : (mesSim >= d.mesInicio && mesSim <= d.mesFim);
+                if (ativa) gastoMes += Number(d.valorParcela || 0);
+            });
+
+            const saldoSim = rendaMensal - (gastoMes + valorNovaParcela);
+            if (saldoSim < menorSaldo) {
+                menorSaldo = saldoSim;
+                mesCritico = mesSim;
+            }
+            if (saldoSim < 0) mesesNegativos++;
+        }
+
+        const impacto = ((valorNovaParcela / rendaMensal) * 100).toFixed(1);
+        let diagClass = "sim-badge-safe";
+        let diagTexto = "Margem confortável garantida.";
+
+        if (mesesNegativos > 0) {
+            diagClass = "sim-badge-danger";
+            diagTexto = `Saldo negativo em ${mesesNegativos} mês(es).`;
+        } else if (menorSaldo < rendaMensal * 0.1) {
+            diagClass = "sim-badge-warn";
+            diagTexto = "Margem apertada no pior mês.";
+        }
+
+        box.innerHTML = `
+            <div>Parcela: <strong>${formatadorReal.format(valorNovaParcela)}</strong> (${impacto}% da renda)</div>
+            <div>Pior mês: <strong>${mesCritico}</strong> · Saldo: <strong>${formatadorReal.format(menorSaldo)}</strong></div>
+            <div class="${diagClass}">${diagTexto}</div>
         `;
-    } catch (error) { resultadoBox.innerHTML = "<p>Erro na simulação.</p>"; }
+    } catch {
+        box.innerHTML = `<span class="sim-badge-danger">Erro ao calcular a simulação.</span>`;
+    }
 });
+
+// Inicialização
+async function init() {
+    const hoje = new Date();
+    const mesAtual = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}`;
+    if (!document.getElementById("consulta-mes").value) {
+        document.getElementById("consulta-mes").value = mesAtual;
+    }
+    await atualizarDashboardMensal();
+}
+
+init();
