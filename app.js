@@ -1111,27 +1111,13 @@ document.getElementById("form-simulador").addEventListener("submit", async (e) =
 
         const impactoRenda = rendaMensal > 0 ? ((valorNovaParcela / rendaMensal) * 100).toFixed(1) : "0.0";
         let statusHtml = "";
-        let recadoMascote = "Margem confortável no orçamento do período.";
 
-        if (mesesNegativos > 0) {
-            recadoMascote = "Opa, esse parcelamento aperta o caixa em pelo menos um mês.";
-            statusHtml = `<div class="status-bar status-danger">Compra inviável: déficit previsto em ${mesesNegativos} mês(es).</div>`;
-        } else if (menorSaldo < (rendaMensal * 0.1)) {
-            recadoMascote = "Dá para encaixar, mas a folga no pior mês fica bem curta.";
-            statusHtml = `<div class="status-bar status-warning">Atenção: margem livre muito baixa no pior mês.</div>`;
-        } else {
-            recadoMascote = "Tudo certo por aqui: o saldo continua no verde.";
-            statusHtml = `<div class="status-bar status-safe">Compra viável: margem livre confortável garantida.</div>`;
-        }
+        if (mesesNegativos > 0) statusHtml = `<div class="status-bar status-danger">Compra inviável: déficit previsto em ${mesesNegativos} mês(es).</div>`;
+        else if (menorSaldo < (rendaMensal * 0.1)) statusHtml = `<div class="status-bar status-warning">Atenção: margem livre muito baixa no pior mês.</div>`;
+        else statusHtml = `<div class="status-bar status-safe">Compra viável: margem livre confortável garantida.</div>`;
 
         resultadoBox.innerHTML = `
-            <div class="simulador-mascote-header">
-                <img src="./assets/mascote.png" alt="Mascote Zedona" class="simulador-mascote-img">
-                <div>
-                    <h3>Relatório Analítico Zedona</h3>
-                    <p>${recadoMascote}</p>
-                </div>
-            </div>
+            <h3 style="font-size: 0.95rem; color: #fff; border-bottom: 1px solid var(--border-dark); padding-bottom: 8px;">Relatório Analítico Zedona</h3>
             <div class="report-grid">
                 <div class="report-item"><span class="report-label">Valor da Parcela</span><span class="report-value">${formatadorReal.format(valorNovaParcela)}</span></div>
                 <div class="report-item"><span class="report-label">Impacto na Renda</span><span class="report-value text-rose">${impactoRenda}%</span></div>
