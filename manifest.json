@@ -1,14 +1,19 @@
 {
-  "name": "FluxoPróximo",
-  "short_name": "Fluxo",
+  "name": "Zedona",
+  "short_name": "Zedona",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#0A0D0B",
   "theme_color": "#22E56D",
-  "description": "Seu controle financeiro e simulador de caixa inteligente.",
+  "description": "Zedona: controle financeiro inteligente, cartões e simulador de caixa.",
   "icons": [
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/3135/3135706.png",
+      "src": "./assets/icone-app.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "./assets/icone-app.png",
       "sizes": "512x512",
       "type": "image/png"
     }

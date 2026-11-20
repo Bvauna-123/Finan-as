@@ -1,11 +1,13 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-viewport="compact">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>FluxoPróximo | Controle Financeiro</title>
+    <title>Zedona | Controle Financeiro Inteligente</title>
 
     <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" href="./assets/icone-app.png">
+    <link rel="apple-touch-icon" href="./assets/icone-app.png">
     <meta name="theme-color" content="#0A0D0B">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
@@ -22,11 +24,9 @@
     <div id="auth-screen" class="auth-screen">
         <div class="auth-card">
             <div class="brand-header">
-                <div class="brand-badge">
-                    <i data-lucide="wallet"></i>
-                </div>
+                <img src="./assets/logo.png" alt="Logo Zedona" class="brand-logo-img">
                 <div>
-                    <h1 class="page-title">FluxoPróximo</h1>
+                    <h1 class="page-title">Zedona</h1>
                     <p class="page-subtitle">Acesse sua conta ou crie um cadastro</p>
                 </div>
             </div>
@@ -87,12 +87,12 @@
         </div>
     </div>
 
-    <!-- Aplicação Principal -->
+    <!-- Aplicação Principal Zedona -->
     <div class="app-layout hidden">
-        <main class="main-content">
+        <main class="zedona-shell">
 
-            <!-- Hero Verde em Destaque (inspirado no painel principal da referência) -->
-            <section class="hero-green-panel animate-fade-in">
+            <!-- Painel Verde Zedona -->
+            <aside class="hero-green-panel animate-fade-in">
                 <header class="topbar">
                     <div class="header-titles">
                         <button type="button" class="perfil-avatar-wrap" id="btn-abrir-perfil" title="Alterar foto de perfil">
@@ -103,7 +103,11 @@
                             <span class="avatar-edit-dot"><i data-lucide="camera"></i></span>
                         </button>
                         <div>
-                            <span class="hero-kicker">FluxoPróximo</span>
+                            <div class="hero-brand-row">
+                                <img src="./assets/logo.png" alt="Zedona" class="hero-logo-mini">
+                                <span class="hero-kicker">Zedona</span>
+                                <span id="screen-size-pill" class="screen-badge">AUTO</span>
+                            </div>
                             <p class="hero-greeting" id="usuario-subtitulo">Olá</p>
                         </div>
                     </div>
@@ -124,42 +128,48 @@
                     </div>
                 </header>
 
-                <div class="hero-balance-row mt-4">
-                    <div>
-                        <span class="hero-balance-label">Saldo Livre no Mês</span>
-                        <h1 id="dash-saldo" class="hero-balance-value">R$ 0,00</h1>
-                        <div class="hero-sub-pills mt-2">
-                            <span class="hero-pill">Receita: <strong id="dash-renda">R$ 0,00</strong></span>
-                            <span class="hero-pill">Despesas: <strong id="dash-despesas">R$ 0,00</strong></span>
-                        </div>
-                        <p class="hero-method-caption mt-2" id="dash-detalhe-metodos">Débito: R$ 0,00 • Crédito: R$ 0,00</p>
-                    </div>
+                <div class="hero-balance-block mt-3">
+                    <span class="hero-balance-label">Saldo Livre Projetado</span>
+                    <h1 id="dash-saldo" class="hero-balance-value">R$ 0,00</h1>
 
-                    <div class="renda-widget" id="renda-widget-container">
-                        <div id="renda-view" class="renda-view hidden">
-                            <div>
-                                <span class="renda-label">Renda Base</span>
-                                <strong id="renda-valor-display">R$ 0,00</strong>
-                            </div>
-                            <button type="button" id="btn-editar-renda" class="btn-icon-dark" title="Editar renda">
-                                <i data-lucide="pencil"></i>
-                            </button>
+                    <div class="hero-metrics-strip mt-2">
+                        <div class="hero-mini-card">
+                            <span>Receita</span>
+                            <strong id="dash-renda">R$ 0,00</strong>
                         </div>
-                        <form id="form-usuario" class="renda-form hidden">
-                            <div class="input-icon-group compact">
-                                <span class="field-prefix dark-prefix">R$</span>
-                                <input type="number" id="salario" class="input-dark-inline has-prefix" step="0.01" placeholder="3500.00" required>
-                            </div>
-                            <button type="submit" class="btn btn-dark-solid btn-sm">Salvar</button>
-                            <button type="button" id="btn-cancelar-renda" class="btn btn-ghost-dark btn-sm hidden">Cancelar</button>
-                        </form>
+                        <div class="hero-mini-card">
+                            <span>Despesas</span>
+                            <strong id="dash-despesas">R$ 0,00</strong>
+                        </div>
                     </div>
+                    <p class="hero-method-caption mt-2" id="dash-detalhe-metodos">Débito: R$ 0,00 • Crédito: R$ 0,00</p>
                 </div>
 
-                <!-- Barra de Ações Rápidas (estilo Deposit / Withdraw) -->
-                <div class="action-bar mt-4">
+                <!-- Widget de Renda Base -->
+                <div class="renda-widget mt-3" id="renda-widget-container">
+                    <div id="renda-view" class="renda-view hidden">
+                        <div>
+                            <span class="renda-label">Renda Mensal Base</span>
+                            <strong id="renda-valor-display">R$ 0,00</strong>
+                        </div>
+                        <button type="button" id="btn-editar-renda" class="btn-icon-dark" title="Editar renda">
+                            <i data-lucide="pencil"></i>
+                        </button>
+                    </div>
+                    <form id="form-usuario" class="renda-form hidden">
+                        <div class="input-icon-group compact">
+                            <span class="field-prefix dark-prefix">R$</span>
+                            <input type="number" id="salario" class="input-dark-inline has-prefix" step="0.01" placeholder="3500.00" required>
+                        </div>
+                        <button type="submit" class="btn btn-dark-solid btn-sm">Salvar</button>
+                        <button type="button" id="btn-cancelar-renda" class="btn btn-ghost-dark btn-sm hidden">Cancelar</button>
+                    </form>
+                </div>
+
+                <!-- Ações principais em tablet/desktop -->
+                <div class="action-bar desktop-actions mt-3">
                     <button type="button" id="btn-abrir-lancamento" class="btn btn-dark-action">
-                        <i data-lucide="plus"></i>
+                        <i data-lucide="plus-circle"></i>
                         <span>Novo Lançamento</span>
                     </button>
                     <button type="button" id="btn-abrir-simulador" class="btn btn-dark-action">
@@ -167,39 +177,40 @@
                         <span>Simular Compra</span>
                     </button>
                 </div>
-            </section>
+            </aside>
 
-            <!-- Seção de Visão Mensal, Gráfico e Lançamentos -->
-            <section id="dashboard-mensal" class="dashboard-section animate-fade-in delay-1">
-                <div class="card-header-bar">
-                    <div class="filter-group-wrap">
-                        <h2>Atividade Mensal</h2>
-                        <div class="segmented-control metodo-filtro-control">
-                            <input type="radio" id="filtro-todos" name="filtroMetodo" value="todos" checked>
-                            <label for="filtro-todos">Todos</label>
-                            <input type="radio" id="filtro-debito" name="filtroMetodo" value="debito">
-                            <label for="filtro-debito">Débito</label>
-                            <input type="radio" id="filtro-credito" name="filtroMetodo" value="credito">
-                            <label for="filtro-credito">Crédito</label>
+            <!-- Área de Controle Mensal, Gráfico e Lançamentos -->
+            <section id="dashboard-mensal" class="workspace-panel animate-fade-in delay-1">
+                <div class="workspace-toolbar">
+                    <div class="toolbar-top-row">
+                        <h2>Fluxo Mensal</h2>
+                        <div class="month-navigator">
+                            <button type="button" id="btn-prev-month" class="nav-arrow" title="Mês Anterior">
+                                <i data-lucide="chevron-left"></i>
+                            </button>
+                            <input type="month" id="consulta-mes" class="premium-select">
+                            <button type="button" id="btn-next-month" class="nav-arrow" title="Próximo Mês">
+                                <i data-lucide="chevron-right"></i>
+                            </button>
                         </div>
                     </div>
 
-                    <div class="month-navigator">
-                        <button type="button" id="btn-prev-month" class="nav-arrow" title="Mês Anterior">
-                            <i data-lucide="chevron-left"></i>
-                        </button>
-                        <input type="month" id="consulta-mes" class="premium-select">
-                        <button type="button" id="btn-next-month" class="nav-arrow" title="Próximo Mês">
-                            <i data-lucide="chevron-right"></i>
-                        </button>
+                    <div class="segmented-control metodo-filtro-control">
+                        <input type="radio" id="filtro-todos" name="filtroMetodo" value="todos" checked>
+                        <label for="filtro-todos">Todos</label>
+                        <input type="radio" id="filtro-debito" name="filtroMetodo" value="debito">
+                        <label for="filtro-debito">Débito</label>
+                        <input type="radio" id="filtro-credito" name="filtroMetodo" value="credito">
+                        <label for="filtro-credito">Crédito</label>
+                        <div class="segmented-highlight"></div>
                     </div>
                 </div>
 
-                <div class="dashboard-content-grid mt-3">
+                <div class="workspace-grid mt-3">
                     <div class="chart-container card-dark hidden">
                         <div class="card-dark-head">
                             <i data-lucide="pie-chart" class="accent-green"></i>
-                            <h3 class="chart-title">Gastos por Categoria</h3>
+                            <h3 class="chart-title">Categorias</h3>
                         </div>
                         <div class="chart-canvas-wrap">
                             <canvas id="categoryChart"></canvas>
@@ -207,11 +218,15 @@
                     </div>
 
                     <div class="table-container card-dark">
+                        <div class="card-dark-head">
+                            <i data-lucide="list-checks" class="accent-green"></i>
+                            <h3 class="chart-title">Lançamentos do Período</h3>
+                        </div>
                         <table class="modern-table">
                             <thead>
                                 <tr>
                                     <th>Descrição</th>
-                                    <th>Categoria / Pagamento</th>
+                                    <th>Categoria / Meio</th>
                                     <th>Valor</th>
                                     <th class="text-right">Ações</th>
                                 </tr>
@@ -219,14 +234,31 @@
                             <tbody id="lista-despesas-corpo"></tbody>
                         </table>
                         <div id="empty-state" class="empty-state hidden">
-                            <div class="empty-icon"><i data-lucide="inbox"></i></div>
+                            <img src="./assets/mascote.png" alt="Mascote Zedona" class="mascote-empty-img">
                             <h4>Nenhum lançamento neste mês</h4>
-                            <p>Seu fluxo de caixa está livre para o período selecionado.</p>
+                            <p>Seu caixa está livre no período selecionado.</p>
                         </div>
                     </div>
                 </div>
             </section>
+
         </main>
+
+        <!-- Dock Inferior Inteligente para Celulares -->
+        <nav class="mobile-action-dock" aria-label="Ações rápidas Zedona">
+            <button type="button" id="dock-btn-lancamento" class="dock-btn dock-btn-primary">
+                <i data-lucide="plus"></i>
+                <span>Lançar</span>
+            </button>
+            <button type="button" id="dock-btn-simulador" class="dock-btn">
+                <i data-lucide="calculator"></i>
+                <span>Simular</span>
+            </button>
+            <button type="button" id="dock-btn-cartoes" class="dock-btn">
+                <i data-lucide="credit-card"></i>
+                <span>Cartões</span>
+            </button>
+        </nav>
     </div>
 
     <!-- Modal de Lançamento -->
@@ -354,7 +386,7 @@
                 </div>
                 <div class="form-group">
                     <label class="label-premium" for="input-cor-cartao">Cor de Identificação</label>
-                    <input type="color" id="input-cor-cartao" class="input-color-premium" value="#22c55e">
+                    <input type="color" id="input-cor-cartao" class="input-color-premium" value="#22e56d">
                 </div>
                 <div class="form-actions full-width">
                     <button type="submit" class="btn btn-emerald w-100">
@@ -403,13 +435,13 @@
         </div>
     </div>
 
-    <!-- Modal de Instalar Aplicativo no Celular -->
+    <!-- Modal de Instalar Aplicativo -->
     <div id="modal-instalar-app" class="modal-overlay hidden" style="z-index: 10006;">
         <div class="modal-content alert-modal">
-            <div class="modal-badge-icon"><i data-lucide="smartphone"></i></div>
-            <h3>Instalar FluxoPróximo</h3>
+            <img src="./assets/icone-app.png" alt="Ícone Zedona" class="modal-app-icon-img">
+            <h3>Instalar Zedona</h3>
             <p id="instrucao-instalacao-texto" class="text-muted mt-2">
-                Adicione o aplicativo à tela inicial do celular para abrir em tela cheia e sem zoom.
+                Adicione o Zedona à tela inicial para abrir em tela cheia, sem zoom e com acesso imediato.
             </p>
             <div class="modal-actions mt-4">
                 <button type="button" id="btn-confirmar-instalacao" class="btn btn-emerald">
@@ -451,9 +483,9 @@
         <div class="modal-content form-modal" style="max-width: 500px;">
             <div class="modal-header">
                 <div class="modal-title-group">
-                    <i data-lucide="calculator" class="modal-header-icon"></i>
+                    <img src="./assets/mascote.png" alt="Mascote Zedona" class="modal-mascote-mini">
                     <div>
-                        <h2>Simulador Financeiro</h2>
+                        <h2>Simulador Zedona</h2>
                         <p class="text-muted text-sm">Análise de impacto antes de comprar</p>
                     </div>
                 </div>

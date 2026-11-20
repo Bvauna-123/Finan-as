@@ -51,6 +51,28 @@ function refreshIcons() {
 }
 refreshIcons();
 
+function detectarTamanhoTela() {
+    const w = window.innerWidth;
+    let mode = 'compact';
+    let label = `MOBILE ${w}px`;
+
+    if (w >= 1024) {
+        mode = 'desktop';
+        label = `DESKTOP ${w}px`;
+    } else if (w >= 640) {
+        mode = 'tablet';
+        label = `TABLET ${w}px`;
+    }
+
+    document.documentElement.dataset.viewport = mode;
+    const badge = document.getElementById('screen-size-pill');
+    if (badge) badge.textContent = label;
+}
+
+detectarTamanhoTela();
+window.addEventListener('resize', detectarTamanhoTela, { passive: true });
+window.addEventListener('orientationchange', () => setTimeout(detectarTamanhoTela, 120), { passive: true });
+
 // Bloqueia zoom por gesto de pinça e duplo toque no app instalado
 document.addEventListener('gesturestart', (e) => e.preventDefault());
 let lastTouchEnd = 0;
@@ -90,7 +112,7 @@ window.addEventListener('appinstalled', () => {
     deferredInstallPrompt = null;
     document.getElementById('btn-instalar-app-topbar').classList.add('hidden');
     toggleModal('modal-instalar-app', 'close');
-    showToast("FluxoPróximo instalado no dispositivo.", "success");
+    showToast("Zedona instalado no dispositivo.", "success");
 });
 
 function abrirPromptInstalacaoSeAplicavel() {
@@ -99,7 +121,7 @@ function abrirPromptInstalacaoSeAplicavel() {
     const btnInstalar = document.getElementById('btn-confirmar-instalacao');
 
     if (deferredInstallPrompt) {
-        textoEl.textContent = "Instale o FluxoPróximo na tela inicial para acesso rápido, tela cheia e sem zoom.";
+        textoEl.textContent = "Instale o Zedona na tela inicial para acesso rápido, tela cheia e sem zoom.";
         btnInstalar.classList.remove('hidden');
         toggleModal('modal-instalar-app', 'open');
     } else if (isIosDevice()) {
@@ -288,10 +310,10 @@ document.getElementById('form-auth').addEventListener('submit', async (e) => {
             fotoCadastroBase64 = null;
             document.getElementById('preview-foto-cadastro').classList.add('hidden');
             document.getElementById('auth-foto-label').textContent = 'Selecionar imagem';
-            showToast("Conta criada com sucesso.", "success");
+            showToast("Conta criada no Zedona.", "success");
         } else {
             await signInWithEmailAndPassword(auth, email, senha);
-            showToast("Sessão iniciada.", "success");
+            showToast("Sessão iniciada no Zedona.", "success");
         }
         document.getElementById('form-auth').reset();
         setTimeout(abrirPromptInstalacaoSeAplicavel, 700);
@@ -323,6 +345,7 @@ onAuthStateChanged(auth, async (user) => {
         subtitulo.textContent = `Olá, ${user.displayName || user.email}`;
         authScreen.classList.add('hidden');
         appLayout.classList.remove('hidden');
+        detectarTamanhoTela();
         refreshIcons();
         await inicializarApp();
     } else {
@@ -450,15 +473,14 @@ function renderizarListaCartoes() {
     refreshIcons();
 }
 
-document.getElementById('btn-abrir-cartoes').addEventListener('click', async () => {
+async function abrirModalCartoes() {
     await carregarCartoesUsuario();
     toggleModal('modal-cartoes', 'open');
-});
+}
 
-document.getElementById('btn-atalho-novo-cartao').addEventListener('click', async () => {
-    await carregarCartoesUsuario();
-    toggleModal('modal-cartoes', 'open');
-});
+document.getElementById('btn-abrir-cartoes').addEventListener('click', abrirModalCartoes);
+document.getElementById('dock-btn-cartoes').addEventListener('click', abrirModalCartoes);
+document.getElementById('btn-atalho-novo-cartao').addEventListener('click', abrirModalCartoes);
 
 document.getElementById('form-novo-cartao').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -560,7 +582,7 @@ document.getElementById('form-nova-categoria').addEventListener('submit', async 
     }
 });
 
-document.getElementById('btn-abrir-lancamento').addEventListener('click', async () => {
+async function abrirModalLancamento() {
     idEdicaoAtual = null;
     document.getElementById("form-despesa").reset();
     document.getElementById("modal-lancamento-titulo").textContent = "Adicionar Lançamento";
@@ -570,9 +592,16 @@ document.getElementById('btn-abrir-lancamento').addEventListener('click', async 
     await carregarCategoriasNoSelect();
     await carregarCartoesUsuario();
     toggleModal('modal-form-lancamento', 'open');
-});
+}
 
-document.getElementById('btn-abrir-simulador').addEventListener('click', () => toggleModal('modal-form-simulador', 'open'));
+function abrirModalSimulador() {
+    toggleModal('modal-form-simulador', 'open');
+}
+
+document.getElementById('btn-abrir-lancamento').addEventListener('click', abrirModalLancamento);
+document.getElementById('dock-btn-lancamento').addEventListener('click', abrirModalLancamento);
+document.getElementById('btn-abrir-simulador').addEventListener('click', abrirModalSimulador);
+document.getElementById('dock-btn-simulador').addEventListener('click', abrirModalSimulador);
 
 async function atualizarDashboardMensal() {
     if (!currentUserId) return;
@@ -636,8 +665,14 @@ async function atualizarDashboardMensal() {
                 const tr = document.createElement("tr");
 
                 const tdDesc = document.createElement("td");
+                tdDesc.style.width = "34%";
                 const strongDesc = document.createElement("strong");
                 strongDesc.textContent = despesa.descricao;
+                strongDesc.style.display = "block";
+                strongDesc.style.overflow = "hidden";
+                strongDesc.style.textOverflow = "ellipsis";
+                strongDesc.style.whiteSpace = "nowrap";
+
                 const divRef = document.createElement("div");
                 divRef.className = "text-muted text-sm mt-1";
                 divRef.textContent = `Ref: ${progresso}`;
@@ -645,6 +680,7 @@ async function atualizarDashboardMensal() {
                 tdDesc.appendChild(divRef);
 
                 const tdCat = document.createElement("td");
+                tdCat.style.width = "28%";
                 const badge = document.createElement("span");
                 badge.className = "dynamic-badge";
                 badge.style.backgroundColor = dictCores[cat];
@@ -660,6 +696,9 @@ async function atualizarDashboardMensal() {
                     : `<i data-lucide="banknote" style="width:12px;height:12px;"></i>`;
                 const mText = document.createElement("span");
                 mText.textContent = rotuloMetodo;
+                mText.style.overflow = "hidden";
+                mText.style.textOverflow = "ellipsis";
+                mText.style.whiteSpace = "nowrap";
                 mBadge.appendChild(mText);
                 divMetodo.appendChild(mBadge);
 
@@ -667,11 +706,15 @@ async function atualizarDashboardMensal() {
                 tdCat.appendChild(divMetodo);
 
                 const tdValor = document.createElement("td");
+                tdValor.style.width = "22%";
                 tdValor.style.fontWeight = "700";
+                tdValor.style.whiteSpace = "nowrap";
                 tdValor.textContent = formatadorReal.format(despesa.valorParcela);
 
                 const tdAcoes = document.createElement("td");
                 tdAcoes.className = "text-right";
+                tdAcoes.style.width = "16%";
+                tdAcoes.style.whiteSpace = "nowrap";
 
                 const btnEditar = document.createElement("button");
                 btnEditar.type = "button";
@@ -685,7 +728,7 @@ async function atualizarDashboardMensal() {
                 btnExcluir.className = "btn-icon danger btn-excluir";
                 btnExcluir.dataset.id = documento.id;
                 btnExcluir.title = "Excluir";
-                btnExcluir.style.marginLeft = "6px";
+                btnExcluir.style.marginLeft = "4px";
                 btnExcluir.innerHTML = '<i data-lucide="trash-2"></i>';
 
                 tdAcoes.appendChild(btnEditar);
@@ -726,7 +769,7 @@ async function atualizarDashboardMensal() {
                     plugins: {
                         legend: {
                             position: 'bottom',
-                            labels: { color: '#9AA6A0', boxWidth: 10, padding: 14 }
+                            labels: { color: '#9AA6A0', boxWidth: 10, padding: 12 }
                         }
                     }
                 }
@@ -836,7 +879,7 @@ document.getElementById("form-usuario").addEventListener("submit", async (e) => 
     if (!currentUserId) return;
     const salario = parseFloat(document.getElementById("salario").value);
     await setDoc(doc(db, "usuarios", currentUserId), { salarioBase: salario, atualizadoEm: new Date().toISOString() }, { merge: true });
-    showToast("Renda atualizada.", "success");
+    showToast("Renda atualizada no Zedona.", "success");
     inicializarApp();
 });
 
@@ -1005,7 +1048,7 @@ document.getElementById("form-simulador").addEventListener("submit", async (e) =
         else statusHtml = `<div class="status-bar status-safe">Compra viável: margem livre confortável garantida.</div>`;
 
         resultadoBox.innerHTML = `
-            <h3 style="font-size: 0.95rem; color: #fff; border-bottom: 1px solid var(--border-dark); padding-bottom: 8px;">Relatório Analítico</h3>
+            <h3 style="font-size: 0.95rem; color: #fff; border-bottom: 1px solid var(--border-dark); padding-bottom: 8px;">Relatório Analítico Zedona</h3>
             <div class="report-grid">
                 <div class="report-item"><span class="report-label">Valor da Parcela</span><span class="report-value">${formatadorReal.format(valorNovaParcela)}</span></div>
                 <div class="report-item"><span class="report-label">Impacto na Renda</span><span class="report-value text-rose">${impactoRenda}%</span></div>

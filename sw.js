@@ -1,10 +1,13 @@
-const CACHE_NAME = 'fluxoproximo-v12';
+const CACHE_NAME = 'zedona-v2';
 const urlsToCache = [
     './',
     './index.html',
     './style.css',
     './app.js',
     './manifest.json',
+    './assets/logo.png',
+    './assets/mascote.png',
+    './assets/icone-app.png',
     'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap',
     'https://cdn.jsdelivr.net/npm/chart.js',
     'https://unpkg.com/lucide@latest'
