@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>FluxoPróximo | Dashboard Premium</title>
-    
+
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#4f46e5">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -12,19 +12,19 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
-    
+
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
-    <!-- Tela de Login / Cadastro -->
+    <!-- Ecrã de Login / Registo -->
     <div id="auth-screen" class="auth-screen">
         <div class="card auth-card shadow-xl">
             <div class="header-titles" style="justify-content: center; margin-bottom: 1rem;">
                 <div class="logo-icon">✨</div>
                 <div>
                     <h1 class="page-title">FluxoPróximo</h1>
-                    <p class="page-subtitle">Acesse sua conta ou crie um cadastro</p>
+                    <p class="page-subtitle">Aceda à sua conta ou crie um registo</p>
                 </div>
             </div>
 
@@ -32,19 +32,19 @@
                 <input type="radio" id="auth-mode-login" name="authMode" value="login" checked>
                 <label for="auth-mode-login">Entrar</label>
                 <input type="radio" id="auth-mode-register" name="authMode" value="register">
-                <label for="auth-mode-register">Cadastrar</label>
+                <label for="auth-mode-register">Registar</label>
                 <div class="segmented-highlight"></div>
             </div>
 
             <form id="form-auth" class="form-grid" style="grid-template-columns: 1fr;">
                 <div id="grupo-nome-cadastro" class="form-group hidden">
-                    <label class="label-premium">Seu Nome</label>
+                    <label class="label-premium">O Seu Nome</label>
                     <input type="text" id="auth-nome" class="input-premium" placeholder="Ex: Bruno">
                 </div>
                 <div id="grupo-foto-cadastro" class="form-group hidden">
                     <label class="label-premium">Foto de Perfil (Opcional)</label>
                     <div class="avatar-upload-row">
-                        <img id="preview-foto-cadastro" class="avatar-preview hidden" alt="Prévia da foto">
+                        <img id="preview-foto-cadastro" class="avatar-preview hidden" alt="Pré-visualização da foto">
                         <input type="file" id="auth-foto-file" class="input-premium" accept="image/*">
                     </div>
                 </div>
@@ -53,11 +53,11 @@
                     <input type="email" id="auth-email" class="input-premium" placeholder="voce@email.com" required>
                 </div>
                 <div class="form-group">
-                    <label class="label-premium">Senha</label>
+                    <label class="label-premium">Palavra-passe</label>
                     <input type="password" id="auth-senha" class="input-premium" placeholder="Mínimo 6 caracteres" minlength="6" required>
                 </div>
                 <button type="submit" id="btn-auth-submit" class="btn-primary w-100 mt-2">Entrar</button>
-                <button type="button" id="btn-esqueci-senha" class="btn-ghost btn-sm w-100 mt-1">Esqueci minha senha</button>
+                <button type="button" id="btn-esqueci-senha" class="btn-ghost btn-sm w-100 mt-1">Esqueci a palavra-passe</button>
             </form>
         </div>
     </div>
@@ -65,19 +65,19 @@
     <!-- Aplicação Principal -->
     <div class="app-layout hidden">
         <main class="main-content">
-            
+
             <header class="topbar animate-fade-in">
                 <div class="header-titles">
-                    <div class="perfil-avatar-wrap" id="btn-abrir-perfil" title="Alterar foto ou dados do perfil">
-                        <img id="header-avatar-img" class="header-avatar hidden" alt="Foto do usuário">
+                    <div class="perfil-avatar-wrap" id="btn-abrir-perfil" title="Alterar foto de perfil">
+                        <img id="header-avatar-img" class="header-avatar hidden" alt="Foto do utilizador">
                         <div id="header-avatar-fallback" class="logo-icon">✨</div>
                     </div>
                     <div>
                         <h1 class="page-title">FluxoPróximo</h1>
-                        <p class="page-subtitle" id="usuario-subtitulo">Seu controle financeiro inteligente</p>
+                        <p class="page-subtitle" id="usuario-subtitulo">O seu controlo financeiro inteligente</p>
                     </div>
                 </div>
-                
+
                 <div class="topbar-controls">
                     <div class="renda-widget shadow-hover" id="renda-widget-container">
                         <div id="renda-view" class="renda-view hidden">
@@ -90,12 +90,12 @@
                                 <span class="icon">R$</span>
                                 <input type="number" id="salario" class="input-premium" step="0.01" placeholder="3500.00" required>
                             </div>
-                            <button type="submit" class="btn-primary btn-sm">Salvar</button>
+                            <button type="submit" class="btn-primary btn-sm">Guardar</button>
                             <button type="button" id="btn-cancelar-renda" class="btn-ghost btn-sm hidden">Cancelar</button>
                         </form>
                     </div>
-                    <button id="btn-abrir-cartoes" class="btn-outline btn-sm" title="Gerenciar Cartões">💳 Cartões</button>
-                    <button id="btn-instalar-app-topbar" class="btn-outline btn-sm hidden" title="Instalar Aplicativo">📲 Instalar</button>
+                    <button id="btn-abrir-cartoes" class="btn-outline btn-sm" title="Gerir Cartões">💳 Cartões</button>
+                    <button id="btn-instalar-app-topbar" class="btn-outline btn-sm hidden" title="Instalar Aplicação">📲 Instalar</button>
                     <button id="btn-logout" class="btn-outline btn-sm" title="Sair da conta">Sair</button>
                 </div>
             </header>
@@ -174,7 +174,7 @@
                             <div id="empty-state" class="empty-state hidden">
                                 <div class="empty-icon">🍃</div>
                                 <h4>Tudo Limpo!</h4>
-                                <p>Seu fluxo de caixa está livre neste mês.</p>
+                                <p>O seu fluxo de caixa está livre neste mês.</p>
                             </div>
                         </div>
                     </div>
@@ -257,22 +257,22 @@
                     </div>
                 </div>
                 <div class="form-actions full-width mt-3">
-                    <button type="submit" id="btn-submit-lancamento" class="btn-primary w-100">Salvar Lançamento</button>
+                    <button type="submit" id="btn-submit-lancamento" class="btn-primary w-100">Guardar Lançamento</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Modal de Gerenciar Cartões -->
+    <!-- Modal de Gerir Cartões -->
     <div id="modal-cartoes" class="modal-overlay hidden" style="z-index: 10004;">
         <div class="modal-content form-modal shadow-xl" style="max-width: 480px;">
             <div class="modal-header">
-                <h2>Meus Cartões de Crédito</h2>
+                <h2>Os Meus Cartões de Crédito</h2>
                 <button class="btn-close-modal btn-fechar">✖</button>
             </div>
             <form id="form-novo-cartao" class="form-grid mt-4">
                 <div class="form-group full-width">
-                    <label class="label-premium">Nome / Apelido do Cartão</label>
+                    <label class="label-premium">Nome / Designação do Cartão</label>
                     <input type="text" id="input-nome-cartao" class="input-premium" placeholder="Ex: Nubank, Itaú, Inter..." required>
                 </div>
                 <div class="form-group">
@@ -295,7 +295,7 @@
     <div id="modal-perfil" class="modal-overlay hidden" style="z-index: 10004;">
         <div class="modal-content shadow-xl" style="max-width: 380px;">
             <div class="modal-header">
-                <h2>Foto do Perfil</h2>
+                <h2>Foto de Perfil</h2>
                 <button class="btn-close-modal btn-fechar">✖</button>
             </div>
             <form id="form-foto-perfil" class="mt-4" style="text-align: left;">
@@ -303,25 +303,25 @@
                     <img id="preview-foto-modal" class="avatar-preview-lg hidden" alt="Foto de perfil">
                 </div>
                 <div class="form-group mt-3">
-                    <label class="label-premium">Escolher Foto no Celular / Computador</label>
+                    <label class="label-premium">Escolher Foto no Telemóvel / Computador</label>
                     <input type="file" id="input-foto-arquivo" class="input-premium" accept="image/*">
                 </div>
                 <div class="form-group mt-3">
                     <label class="label-premium">Ou Cole o Link (URL) da Foto</label>
                     <input type="url" id="input-foto-url" class="input-premium" placeholder="https://...">
                 </div>
-                <button type="submit" class="btn-primary w-100 mt-3">Salvar Foto</button>
+                <button type="submit" class="btn-primary w-100 mt-3">Guardar Foto</button>
             </form>
         </div>
     </div>
 
-    <!-- Modal de Instalar Aplicativo no Celular -->
+    <!-- Modal de Instalar Aplicativo no Telemóvel -->
     <div id="modal-instalar-app" class="modal-overlay hidden" style="z-index: 10006;">
         <div class="modal-content alert-modal shadow-xl">
             <div class="modal-icon">📲</div>
             <h3>Instalar FluxoPróximo</h3>
             <p id="instrucao-instalacao-texto" class="text-muted mt-2">
-                Adicione o aplicativo na tela inicial do seu celular para abrir mais rápido, em tela cheia e sem zoom.
+                Adicione a aplicação ao ecrã inicial do seu telemóvel para abrir mais rápido, em ecrã inteiro e sem zoom.
             </p>
             <div class="modal-actions mt-4" style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
                 <button id="btn-confirmar-instalacao" class="btn-primary">Instalar Agora</button>
@@ -380,11 +380,11 @@
     <div id="modal-confirmacao" class="modal-overlay hidden" style="z-index: 10002;">
         <div class="modal-content alert-modal shadow-xl">
             <div class="modal-icon text-rose">🗑️</div>
-            <h3 id="modal-titulo">Excluir Lançamento?</h3>
-            <p id="modal-mensagem" class="text-muted mt-2">Isso recalculará todas as suas projeções futuras.</p>
+            <h3 id="modal-titulo">Eliminar Lançamento?</h3>
+            <p id="modal-mensagem" class="text-muted mt-2">Isto recalculará todas as suas projeções futuras.</p>
             <div class="modal-actions mt-4" style="display: flex; gap: 10px; justify-content: center;">
                 <button id="btn-modal-cancelar" class="btn-ghost">Cancelar</button>
-                <button id="btn-modal-confirmar" class="btn-danger">Excluir</button>
+                <button id="btn-modal-confirmar" class="btn-danger">Eliminar</button>
             </div>
         </div>
     </div>

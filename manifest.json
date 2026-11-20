@@ -3,9 +3,9 @@
   "short_name": "Fluxo",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#1e1f30",
-  "theme_color": "#1e1f30",
-  "description": "Seu controle financeiro e simulador de caixa inteligente.",
+  "background_color": "#f4f6f8",
+  "theme_color": "#4f46e5",
+  "description": "O seu controlo financeiro e simulador de caixa inteligente.",
   "icons": [
     {
       "src": "https://cdn-icons-png.flaticon.com/512/3135/3135706.png",
