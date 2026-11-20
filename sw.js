@@ -1,4 +1,4 @@
-const CACHE_NAME = 'zedona-v10';
+const CACHE_NAME = 'zedona-v12';
 const urlsToCache = [
     './',
     './index.html',
