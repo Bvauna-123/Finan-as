@@ -571,7 +571,7 @@ document.querySelectorAll('input[name="filtroMetodo"]').forEach(radio => {
 async function carregarCategoriasNoSelect(selecionarValor = null) {
     if (!currentUserId) return;
     const select = document.getElementById("categoria");
-    const categoriasPadroes = ['Moradia', 'Alimentação', 'Tecnologia', 'Assinaturas', 'Lazer', 'Outros'];
+    const categoriasPadroes = [];
 
     try {
         const userSnap = await getDoc(doc(db, "usuarios", currentUserId));
