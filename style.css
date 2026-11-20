@@ -71,45 +71,41 @@ html, body {
     overflow-x: clip;
     min-height: 100vh;
     color-scheme: dark;
+    position: relative;
 }
 
 /* Papel de Parede Desfocado com Mascote no Fundo */
 .mascote-wallpaper {
     position: fixed;
     inset: 0;
-    z-index: -2;
+    z-index: 0;
     pointer-events: none;
     overflow: hidden;
     background-color: var(--bg-main);
 }
 
-.mascote-wallpaper-img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    object-position: center 25%;
-    transform: scale(1.12);
-    filter: blur(18px) saturate(1.15);
-    opacity: 0.24;
+.mascote-wallpaper-layer {
+    position: absolute;
+    inset: -28px;
+    background-image: url('./assets/mascote.png');
+    background-size: cover;
+    background-position: center 22%;
+    background-repeat: no-repeat;
+    filter: blur(14px) saturate(1.2);
+    opacity: 0.34;
+    transform: scale(1.08);
 }
 
 .mascote-wallpaper-scrim {
     position: absolute;
     inset: 0;
-    background: radial-gradient(circle at 50% 20%, rgba(34, 229, 109, 0.08) 0%, rgba(10, 13, 11, 0.78) 70%);
+    background: radial-gradient(circle at 50% 20%, rgba(34, 229, 109, 0.09) 0%, rgba(10, 13, 11, 0.72) 72%);
 }
 
-body::before {
-    content: '';
-    position: fixed;
-    top: -15%;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 90%;
-    height: 45%;
-    background: radial-gradient(circle, rgba(34, 229, 109, 0.12) 0%, transparent 70%);
-    z-index: -1;
-    pointer-events: none;
+.auth-screen,
+.app-layout {
+    position: relative;
+    z-index: 1;
 }
 
 .zedona-shell,
@@ -149,6 +145,7 @@ body::before {
 .mt-2 { margin-top: 0.5rem; }
 .mt-3 { margin-top: 0.85rem; }
 .mt-4 { margin-top: 1.15rem; }
+.mb-3 { margin-bottom: 0.75rem; }
 .mb-4 { margin-bottom: 1.15rem; }
 .w-100 { width: 100%; }
 .full-width { grid-column: 1 / -1; }
@@ -160,58 +157,13 @@ svg.lucide {
     flex-shrink: 0;
 }
 
-/* Imagens de Marca: Logo e Ícone */
+/* Imagens de Marca (Logo apenas no Login + Ícone do App) */
 .brand-logo-img {
     width: 46px;
     height: 46px;
     object-fit: contain;
     border-radius: 12px;
     flex-shrink: 0;
-}
-
-.hero-logo-mini {
-    width: 20px;
-    height: 20px;
-    object-fit: contain;
-    border-radius: 6px;
-    flex-shrink: 0;
-}
-
-.toolbar-logo-img {
-    width: 22px;
-    height: 22px;
-    object-fit: contain;
-    border-radius: 6px;
-    flex-shrink: 0;
-}
-
-.card-logo-mini {
-    width: 18px;
-    height: 18px;
-    object-fit: contain;
-    border-radius: 5px;
-    flex-shrink: 0;
-}
-
-.modal-logo-mini {
-    width: 24px;
-    height: 24px;
-    object-fit: contain;
-    border-radius: 7px;
-    flex-shrink: 0;
-}
-
-.modal-brand-caption {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    font-size: 0.72rem;
-    font-weight: 800;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    color: var(--brand-green);
-    margin-bottom: 0.55rem;
 }
 
 .modal-app-icon-img {
@@ -236,7 +188,7 @@ svg.lucide {
 .auth-card {
     width: 100%;
     max-width: 420px;
-    background: rgba(18, 22, 20, 0.9);
+    background: rgba(18, 22, 20, 0.82);
     backdrop-filter: blur(12px);
     border: 1px solid var(--border-dark-strong);
     border-radius: var(--radius-lg);
@@ -284,7 +236,7 @@ svg.lucide {
 
 /* ─── PAINEL VERDE ZEDONA ─── */
 .hero-green-panel {
-    background: linear-gradient(165deg, #27EC73 0%, #1CD463 100%);
+    background: linear-gradient(165deg, rgba(39, 236, 115, 0.94) 0%, rgba(28, 212, 99, 0.94) 100%);
     color: var(--ink-on-green);
     border-radius: var(--radius-lg);
     padding: 1.05rem;
@@ -309,12 +261,6 @@ svg.lucide {
 .header-titles > div {
     min-width: 0;
     flex: 1;
-}
-
-.hero-brand-row {
-    display: flex;
-    align-items: center;
-    gap: 6px;
 }
 
 .perfil-avatar-wrap {
@@ -367,15 +313,8 @@ svg.lucide {
     height: 10px;
 }
 
-.hero-kicker {
-    font-size: 0.78rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-}
-
 .hero-greeting {
-    font-size: 0.88rem;
+    font-size: 0.92rem;
     font-weight: 700;
     color: var(--ink-on-green);
     white-space: nowrap;
@@ -616,12 +555,6 @@ svg.lucide {
     gap: 8px;
 }
 
-.toolbar-brand-title {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
 .workspace-toolbar h2 {
     font-size: 1.02rem;
     font-weight: 700;
@@ -632,7 +565,8 @@ svg.lucide {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: var(--bg-dark-card);
+    background: rgba(18, 22, 20, 0.86);
+    backdrop-filter: blur(10px);
     border-radius: var(--radius-pill);
     border: 1px solid var(--border-dark);
     padding: 3px;
@@ -681,19 +615,13 @@ svg.lucide {
 }
 
 .card-dark {
-    background: rgba(18, 22, 20, 0.92);
+    background: rgba(18, 22, 20, 0.86);
+    backdrop-filter: blur(10px);
     border: 1px solid var(--border-dark);
     border-radius: var(--radius-lg);
     padding: 0.95rem;
     box-shadow: var(--shadow-dark);
     overflow: hidden;
-}
-
-.card-dark-head {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 0.7rem;
 }
 
 .chart-title {
@@ -1210,14 +1138,7 @@ select.input-premium {
     padding-bottom: 0.8rem;
 }
 
-.modal-title-group {
-    display: flex;
-    align-items: center;
-    gap: 9px;
-    min-width: 0;
-}
-
-.modal-title-group h2 {
+.modal-header h2 {
     font-size: 1.05rem;
     overflow: hidden;
     text-overflow: ellipsis;
