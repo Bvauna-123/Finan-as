@@ -54,32 +54,45 @@ refreshIcons();
 function detectarTamanhoTela() {
     const w = window.innerWidth;
     let mode = 'compact';
-    let label = `MOBILE ${w}px`;
 
     if (w >= 1024) {
         mode = 'desktop';
-        label = `DESKTOP ${w}px`;
     } else if (w >= 640) {
         mode = 'tablet';
-        label = `TABLET ${w}px`;
     }
 
     document.documentElement.dataset.viewport = mode;
-    const badge = document.getElementById('screen-size-pill');
-    if (badge) badge.textContent = label;
 }
 
 detectarTamanhoTela();
 window.addEventListener('resize', detectarTamanhoTela, { passive: true });
 window.addEventListener('orientationchange', () => setTimeout(detectarTamanhoTela, 120), { passive: true });
 
-// Bloqueia zoom por gesto de pinça e duplo toque no app instalado
-document.addEventListener('gesturestart', (e) => e.preventDefault());
+// Bloqueador de zoom (pinça, duplo toque e Ctrl+roda do mouse, incluindo dentro dos pop-ups)
+['gesturestart', 'gesturechange', 'gestureend'].forEach(evtName => {
+    document.addEventListener(evtName, (e) => e.preventDefault(), { passive: false });
+});
+
+document.addEventListener('touchstart', (e) => {
+    if (e.touches && e.touches.length > 1) {
+        e.preventDefault();
+    }
+}, { passive: false });
+
 let lastTouchEnd = 0;
 document.addEventListener('touchend', (e) => {
+    if (e.touches && e.touches.length > 0) return;
     const now = Date.now();
-    if (now - lastTouchEnd <= 300) e.preventDefault();
+    if (now - lastTouchEnd <= 300) {
+        e.preventDefault();
+    }
     lastTouchEnd = now;
+}, { passive: false });
+
+document.addEventListener('wheel', (e) => {
+    if (e.ctrlKey) {
+        e.preventDefault();
+    }
 }, { passive: false });
 
 let currentUserId = null;
@@ -227,18 +240,35 @@ function showToast(mensagem, tipo = 'success') {
     }, 3000);
 }
 
+function sincronizarRolagemModais() {
+    const algumAberto = Array.from(document.querySelectorAll('.modal-overlay'))
+        .some(m => !m.classList.contains('hidden'));
+    document.body.style.overflow = algumAberto ? 'hidden' : '';
+}
+
 function toggleModal(modalId, action) {
     const modal = document.getElementById(modalId);
     if (action === 'open') {
         modal.classList.remove('hidden');
+        modal.scrollTop = 0;
+        const content = modal.querySelector('.modal-content');
+        if (content) content.scrollTop = 0;
+        sincronizarRolagemModais();
         refreshIcons();
     } else {
         modal.classList.add('hidden');
+        sincronizarRolagemModais();
     }
 }
 
 document.querySelectorAll('.btn-fechar').forEach(btn => {
-    btn.addEventListener('click', (e) => e.target.closest('.modal-overlay').classList.add('hidden'));
+    btn.addEventListener('click', (e) => {
+        const modal = e.target.closest('.modal-overlay');
+        if (modal) {
+            modal.classList.add('hidden');
+            sincronizarRolagemModais();
+        }
+    });
 });
 
 function showConfirmModal(onConfirmCallback) {
@@ -413,7 +443,10 @@ async function carregarCartoesUsuario(selecionarId = null) {
     cartoesUsuario.forEach(c => {
         const opt = document.createElement('option');
         opt.value = c.id;
-        opt.textContent = c.fechamento ? `${c.nome} (Fecha dia ${c.fechamento})` : c.nome;
+        const detalhes = [];
+        if (c.fechamento) detalhes.push(`Fecha dia ${c.fechamento}`);
+        if (c.vencimento) detalhes.push(`Vence dia ${c.vencimento}`);
+        opt.textContent = detalhes.length ? `${c.nome} (${detalhes.join(' • ')})` : c.nome;
         select.appendChild(opt);
     });
     if (selecionarId) select.value = selecionarId;
@@ -449,10 +482,14 @@ function renderizarListaCartoes() {
         const strong = document.createElement('strong');
         strong.textContent = c.nome;
         info.appendChild(strong);
-        if (c.fechamento) {
+
+        const metaPartes = [];
+        if (c.fechamento) metaPartes.push(`Fecha dia ${c.fechamento}`);
+        if (c.vencimento) metaPartes.push(`Vence dia ${c.vencimento}`);
+        if (metaPartes.length) {
             const small = document.createElement('div');
             small.className = 'text-muted text-sm';
-            small.textContent = `Fechamento: dia ${c.fechamento}`;
+            small.textContent = metaPartes.join(' • ');
             info.appendChild(small);
         }
 
@@ -475,6 +512,7 @@ function renderizarListaCartoes() {
 
 async function abrirModalCartoes() {
     await carregarCartoesUsuario();
+    await atualizarDashboardMensal();
     toggleModal('modal-cartoes', 'open');
 }
 
@@ -487,10 +525,11 @@ document.getElementById('form-novo-cartao').addEventListener('submit', async (e)
     if (!currentUserId) return;
     const nome = document.getElementById('input-nome-cartao').value.trim();
     const fechamento = parseInt(document.getElementById('input-fechamento-cartao').value, 10) || null;
+    const vencimento = parseInt(document.getElementById('input-vencimento-cartao').value, 10) || null;
     const cor = document.getElementById('input-cor-cartao').value || '#22E56D';
     if (!nome) return;
 
-    const novoCartao = { id: 'card_' + Date.now(), nome, fechamento, cor };
+    const novoCartao = { id: 'card_' + Date.now(), nome, fechamento, vencimento, cor };
     const atualizados = [...cartoesUsuario, novoCartao];
 
     try {
@@ -498,7 +537,8 @@ document.getElementById('form-novo-cartao').addEventListener('submit', async (e)
         document.getElementById('form-novo-cartao').reset();
         document.getElementById('input-cor-cartao').value = '#22e56d';
         await carregarCartoesUsuario(novoCartao.id);
-        showToast("Cartão adicionado.", "success");
+        await atualizarDashboardMensal();
+        showToast("Cartão salvo com fechamento e vencimento.", "success");
     } catch {
         showToast("Erro ao adicionar cartão.", "error");
     }
@@ -512,6 +552,7 @@ document.getElementById('lista-cartoes-container').addEventListener('click', asy
     try {
         await setDoc(doc(db, "usuarios", currentUserId), { cartoes: filtrados }, { merge: true });
         await carregarCartoesUsuario();
+        await atualizarDashboardMensal();
         showToast("Cartão removido.", "success");
     } catch {
         showToast("Erro ao remover cartão.", "error");
@@ -628,6 +669,7 @@ async function atualizarDashboardMensal() {
         let totalCreditoMes = 0;
         let countLancamentos = 0;
         let gastosCategoria = {};
+        let gastosPorCartao = {};
         tbody.innerHTML = "";
 
         const dictCores = {};
@@ -639,8 +681,13 @@ async function atualizarDashboardMensal() {
 
             if (ehAtivaNoMes) {
                 const metodo = despesa.formaPagamento || 'debito';
-                if (metodo === 'credito') totalCreditoMes += despesa.valorParcela;
-                else totalDebitoMes += despesa.valorParcela;
+                if (metodo === 'credito') {
+                    totalCreditoMes += despesa.valorParcela;
+                    const chaveCartao = despesa.cartaoId || 'sem_cartao';
+                    gastosPorCartao[chaveCartao] = (gastosPorCartao[chaveCartao] || 0) + despesa.valorParcela;
+                } else {
+                    totalDebitoMes += despesa.valorParcela;
+                }
 
                 if (filtroMetodo !== 'todos' && metodo !== filtroMetodo) return;
 
@@ -784,10 +831,32 @@ async function atualizarDashboardMensal() {
         }
 
         const saldoLivre = rendaMensal - totalDespesasMes;
+        const percentualComprometido = rendaMensal > 0 ? Math.round((totalDespesasMes / rendaMensal) * 100) : 0;
+        const larguraBarra = Math.min(100, Math.max(0, percentualComprometido));
+
         document.getElementById("dash-renda").textContent = formatadorReal.format(rendaMensal);
         document.getElementById("dash-despesas").textContent = formatadorReal.format(totalDespesasMes);
         document.getElementById("dash-detalhe-metodos").textContent = `Débito: ${formatadorReal.format(totalDebitoMes)} • Crédito: ${formatadorReal.format(totalCreditoMes)}`;
         document.getElementById("dash-saldo").textContent = formatadorReal.format(saldoLivre);
+        document.getElementById("dash-comprometimento").textContent = `${percentualComprometido}%`;
+
+        const barraEl = document.getElementById("dash-comprometimento-bar");
+        barraEl.style.width = `${larguraBarra}%`;
+        barraEl.classList.toggle("over-limit", percentualComprometido > 100);
+
+        const faturasBox = document.getElementById("resumo-faturas-mes");
+        const entradasFatura = Object.entries(gastosPorCartao);
+        if (!entradasFatura.length) {
+            faturasBox.innerHTML = `<div class="faturas-box-title">Faturas do Mês</div><p class="text-muted text-sm">Sem gastos no crédito neste período.</p>`;
+        } else {
+            const linhasHtml = entradasFatura.map(([cardId, valor]) => {
+                const card = mapaCartoes[cardId];
+                const nomeCard = card ? card.nome : 'Cartão não especificado';
+                const vencTexto = card?.vencimento ? `Vence dia ${card.vencimento}` : 'Sem vencimento definido';
+                return `<div class="fatura-row"><div><strong>${nomeCard}</strong><div class="text-muted text-sm">${vencTexto}</div></div><strong>${formatadorReal.format(valor)}</strong></div>`;
+            }).join('');
+            faturasBox.innerHTML = `<div class="faturas-box-title">Faturas do Mês</div>${linhasHtml}`;
+        }
 
     } catch {
         showToast("Erro ao carregar dados.", "error");
@@ -1042,13 +1111,27 @@ document.getElementById("form-simulador").addEventListener("submit", async (e) =
 
         const impactoRenda = rendaMensal > 0 ? ((valorNovaParcela / rendaMensal) * 100).toFixed(1) : "0.0";
         let statusHtml = "";
+        let recadoMascote = "Margem confortável no orçamento do período.";
 
-        if (mesesNegativos > 0) statusHtml = `<div class="status-bar status-danger">Compra inviável: déficit previsto em ${mesesNegativos} mês(es).</div>`;
-        else if (menorSaldo < (rendaMensal * 0.1)) statusHtml = `<div class="status-bar status-warning">Atenção: margem livre muito baixa no pior mês.</div>`;
-        else statusHtml = `<div class="status-bar status-safe">Compra viável: margem livre confortável garantida.</div>`;
+        if (mesesNegativos > 0) {
+            recadoMascote = "Opa, esse parcelamento aperta o caixa em pelo menos um mês.";
+            statusHtml = `<div class="status-bar status-danger">Compra inviável: déficit previsto em ${mesesNegativos} mês(es).</div>`;
+        } else if (menorSaldo < (rendaMensal * 0.1)) {
+            recadoMascote = "Dá para encaixar, mas a folga no pior mês fica bem curta.";
+            statusHtml = `<div class="status-bar status-warning">Atenção: margem livre muito baixa no pior mês.</div>`;
+        } else {
+            recadoMascote = "Tudo certo por aqui: o saldo continua no verde.";
+            statusHtml = `<div class="status-bar status-safe">Compra viável: margem livre confortável garantida.</div>`;
+        }
 
         resultadoBox.innerHTML = `
-            <h3 style="font-size: 0.95rem; color: #fff; border-bottom: 1px solid var(--border-dark); padding-bottom: 8px;">Relatório Analítico Zedona</h3>
+            <div class="simulador-mascote-header">
+                <img src="./assets/mascote.png" alt="Mascote Zedona" class="simulador-mascote-img">
+                <div>
+                    <h3>Relatório Analítico Zedona</h3>
+                    <p>${recadoMascote}</p>
+                </div>
+            </div>
             <div class="report-grid">
                 <div class="report-item"><span class="report-label">Valor da Parcela</span><span class="report-value">${formatadorReal.format(valorNovaParcela)}</span></div>
                 <div class="report-item"><span class="report-label">Impacto na Renda</span><span class="report-value text-rose">${impactoRenda}%</span></div>

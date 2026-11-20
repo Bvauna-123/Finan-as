@@ -2,7 +2,7 @@
 <html lang="pt-BR" data-viewport="compact">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Zedona | Controle Financeiro Inteligente</title>
 
     <link rel="manifest" href="manifest.json">
@@ -28,6 +28,14 @@
                 <div>
                     <h1 class="page-title">Zedona</h1>
                     <p class="page-subtitle">Acesse sua conta ou crie um cadastro</p>
+                </div>
+            </div>
+
+            <div class="auth-mascote-banner mb-4">
+                <img src="./assets/mascote.png" alt="Mascote Zedona" class="auth-mascote-img">
+                <div>
+                    <strong>Seu parceiro de caixa no dia a dia</strong>
+                    <p>Controle parcelas, cartões e simulações antes de comprar.</p>
                 </div>
             </div>
 
@@ -106,7 +114,6 @@
                             <div class="hero-brand-row">
                                 <img src="./assets/logo.png" alt="Zedona" class="hero-logo-mini">
                                 <span class="hero-kicker">Zedona</span>
-                                <span id="screen-size-pill" class="screen-badge">AUTO</span>
                             </div>
                             <p class="hero-greeting" id="usuario-subtitulo">Olá</p>
                         </div>
@@ -143,6 +150,16 @@
                         </div>
                     </div>
                     <p class="hero-method-caption mt-2" id="dash-detalhe-metodos">Débito: R$ 0,00 • Crédito: R$ 0,00</p>
+
+                    <div class="hero-commitment mt-3">
+                        <div class="hero-commitment-head">
+                            <span>Renda comprometida</span>
+                            <strong id="dash-comprometimento">0%</strong>
+                        </div>
+                        <div class="hero-progress-track">
+                            <div id="dash-comprometimento-bar" class="hero-progress-fill" style="width: 0%;"></div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Widget de Renda Base -->
@@ -183,7 +200,10 @@
             <section id="dashboard-mensal" class="workspace-panel animate-fade-in delay-1">
                 <div class="workspace-toolbar">
                     <div class="toolbar-top-row">
-                        <h2>Fluxo Mensal</h2>
+                        <div class="toolbar-brand-title">
+                            <img src="./assets/logo.png" alt="Zedona" class="toolbar-logo-img">
+                            <h2>Fluxo Mensal</h2>
+                        </div>
                         <div class="month-navigator">
                             <button type="button" id="btn-prev-month" class="nav-arrow" title="Mês Anterior">
                                 <i data-lucide="chevron-left"></i>
@@ -209,7 +229,7 @@
                 <div class="workspace-grid mt-3">
                     <div class="chart-container card-dark hidden">
                         <div class="card-dark-head">
-                            <i data-lucide="pie-chart" class="accent-green"></i>
+                            <img src="./assets/logo.png" alt="Zedona" class="card-logo-mini">
                             <h3 class="chart-title">Categorias</h3>
                         </div>
                         <div class="chart-canvas-wrap">
@@ -219,7 +239,7 @@
 
                     <div class="table-container card-dark">
                         <div class="card-dark-head">
-                            <i data-lucide="list-checks" class="accent-green"></i>
+                            <img src="./assets/logo.png" alt="Zedona" class="card-logo-mini">
                             <h3 class="chart-title">Lançamentos do Período</h3>
                         </div>
                         <table class="modern-table">
@@ -266,7 +286,7 @@
         <div class="modal-content form-modal">
             <div class="modal-header">
                 <div class="modal-title-group">
-                    <i data-lucide="receipt" class="modal-header-icon"></i>
+                    <img src="./assets/logo.png" alt="Logo Zedona" class="modal-logo-mini">
                     <h2 id="modal-lancamento-titulo">Adicionar Lançamento</h2>
                 </div>
                 <button type="button" class="btn-close-modal btn-fechar" aria-label="Fechar">
@@ -368,7 +388,7 @@
         <div class="modal-content form-modal" style="max-width: 480px;">
             <div class="modal-header">
                 <div class="modal-title-group">
-                    <i data-lucide="credit-card" class="modal-header-icon"></i>
+                    <img src="./assets/logo.png" alt="Logo Zedona" class="modal-logo-mini">
                     <h2>Cartões de Crédito</h2>
                 </div>
                 <button type="button" class="btn-close-modal btn-fechar" aria-label="Fechar">
@@ -385,6 +405,10 @@
                     <input type="number" id="input-fechamento-cartao" class="input-premium" min="1" max="31" placeholder="Ex: 10">
                 </div>
                 <div class="form-group">
+                    <label class="label-premium" for="input-vencimento-cartao">Dia de Vencimento</label>
+                    <input type="number" id="input-vencimento-cartao" class="input-premium" min="1" max="31" placeholder="Ex: 17">
+                </div>
+                <div class="form-group full-width">
                     <label class="label-premium" for="input-cor-cartao">Cor de Identificação</label>
                     <input type="color" id="input-cor-cartao" class="input-color-premium" value="#22e56d">
                 </div>
@@ -396,6 +420,7 @@
                 </div>
             </form>
             <div id="lista-cartoes-container" class="mt-4"></div>
+            <div id="resumo-faturas-mes" class="faturas-box mt-4"></div>
         </div>
     </div>
 
@@ -404,7 +429,7 @@
         <div class="modal-content" style="max-width: 400px;">
             <div class="modal-header">
                 <div class="modal-title-group">
-                    <i data-lucide="user-circle" class="modal-header-icon"></i>
+                    <img src="./assets/logo.png" alt="Logo Zedona" class="modal-logo-mini">
                     <h2>Foto de Perfil</h2>
                 </div>
                 <button type="button" class="btn-close-modal btn-fechar" aria-label="Fechar">
@@ -439,6 +464,10 @@
     <div id="modal-instalar-app" class="modal-overlay hidden" style="z-index: 10006;">
         <div class="modal-content alert-modal">
             <img src="./assets/icone-app.png" alt="Ícone Zedona" class="modal-app-icon-img">
+            <div class="modal-brand-caption">
+                <img src="./assets/logo.png" alt="Logo Zedona" class="modal-logo-mini">
+                <span>Zedona</span>
+            </div>
             <h3>Instalar Zedona</h3>
             <p id="instrucao-instalacao-texto" class="text-muted mt-2">
                 Adicione o Zedona à tela inicial para abrir em tela cheia, sem zoom e com acesso imediato.
@@ -458,7 +487,7 @@
         <div class="modal-content" style="max-width: 360px;">
             <div class="modal-header">
                 <div class="modal-title-group">
-                    <i data-lucide="tag" class="modal-header-icon"></i>
+                    <img src="./assets/logo.png" alt="Logo Zedona" class="modal-logo-mini">
                     <h2>Nova Categoria</h2>
                 </div>
                 <button type="button" class="btn-close-modal btn-fechar" aria-label="Fechar">
@@ -483,7 +512,7 @@
         <div class="modal-content form-modal" style="max-width: 500px;">
             <div class="modal-header">
                 <div class="modal-title-group">
-                    <img src="./assets/mascote.png" alt="Mascote Zedona" class="modal-mascote-mini">
+                    <img src="./assets/logo.png" alt="Logo Zedona" class="modal-logo-mini">
                     <div>
                         <h2>Simulador Zedona</h2>
                         <p class="text-muted text-sm">Análise de impacto antes de comprar</p>
@@ -524,6 +553,10 @@
     <div id="toast-container" class="toast-container"></div>
     <div id="modal-confirmacao" class="modal-overlay hidden" style="z-index: 10002;">
         <div class="modal-content alert-modal">
+            <div class="modal-brand-caption">
+                <img src="./assets/logo.png" alt="Logo Zedona" class="modal-logo-mini">
+                <span>Zedona</span>
+            </div>
             <div class="modal-badge-icon danger"><i data-lucide="trash-2"></i></div>
             <h3 id="modal-titulo">Excluir Lançamento?</h3>
             <p id="modal-mensagem" class="text-muted mt-2">Isso recalculará todas as suas projeções futuras.</p>
