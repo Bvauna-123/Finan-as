@@ -28,7 +28,6 @@
     --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Oculta barras de rolagem na página inteira e dentro de qualquer pop-up/container */
 *,
 *::before,
 *::after,
@@ -36,6 +35,7 @@
 .modal-content,
 .resultado-box,
 #lista-cartoes-container,
+#lista-categorias-container,
 #resumo-faturas-mes {
     margin: 0;
     padding: 0;
@@ -53,6 +53,7 @@
 .modal-content::-webkit-scrollbar,
 .resultado-box::-webkit-scrollbar,
 #lista-cartoes-container::-webkit-scrollbar,
+#lista-categorias-container::-webkit-scrollbar,
 #resumo-faturas-mes::-webkit-scrollbar {
     display: none !important;
     width: 0 !important;
@@ -75,7 +76,6 @@ html, body {
     position: relative;
 }
 
-/* Papel de Parede Desfocado com Mascote no Fundo */
 .mascote-wallpaper {
     position: fixed;
     inset: 0;
@@ -158,7 +158,6 @@ svg.lucide {
     flex-shrink: 0;
 }
 
-/* Imagens de Marca (Logo apenas no Login + Ícone do App) */
 .brand-logo-img {
     width: 46px;
     height: 46px;
@@ -176,17 +175,17 @@ svg.lucide {
     display: block;
 }
 
-/* ─── AUTENTICAÇÃO (COM SAFE AREA E RESPIRO NAS QUINAS) ─── */
+/* ─── AUTENTICAÇÃO ─── */
 .auth-screen {
     min-height: 100vh;
     min-height: 100dvh;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding-top: max(1.1rem, calc(env(safe-area-inset-top) + 0.65rem));
-    padding-right: max(1.1rem, calc(env(safe-area-inset-right) + 0.35rem));
-    padding-bottom: max(1.65rem, calc(env(safe-area-inset-bottom) + 1rem));
-    padding-left: max(1.1rem, calc(env(safe-area-inset-left) + 0.35rem));
+    padding-top: max(1.15rem, calc(env(safe-area-inset-top) + 0.7rem));
+    padding-right: max(1.15rem, calc(env(safe-area-inset-right) + 0.4rem));
+    padding-bottom: max(1.85rem, calc(env(safe-area-inset-bottom) + 1.15rem));
+    padding-left: max(1.15rem, calc(env(safe-area-inset-left) + 0.4rem));
     width: 100%;
 }
 
@@ -222,16 +221,16 @@ svg.lucide {
     margin-top: 2px;
 }
 
-/* ─── SHELL ADAPTATIVO (MOBILE-FIRST + SAFE AREA + RESPIRO INFERIOR) ─── */
+/* ─── SHELL ADAPTATIVO (RESPIRO QUINAS ARREDONDADAS + SAFE AREA) ─── */
 .app-layout {
     display: flex;
     justify-content: center;
     min-height: 100vh;
     min-height: 100dvh;
-    padding-top: max(0.85rem, calc(env(safe-area-inset-top) + 0.6rem));
-    padding-right: max(0.8rem, calc(env(safe-area-inset-right) + 0.3rem));
-    padding-bottom: calc(6.5rem + env(safe-area-inset-bottom));
-    padding-left: max(0.8rem, calc(env(safe-area-inset-left) + 0.3rem));
+    padding-top: max(0.95rem, calc(env(safe-area-inset-top) + 0.65rem));
+    padding-right: max(0.9rem, calc(env(safe-area-inset-right) + 0.35rem));
+    padding-bottom: calc(7.1rem + env(safe-area-inset-bottom));
+    padding-left: max(0.9rem, calc(env(safe-area-inset-left) + 0.35rem));
     width: 100%;
 }
 
@@ -639,7 +638,6 @@ svg.lucide {
     width: 100%;
 }
 
-/* Badges, Cartões e Faturas */
 .dynamic-badge {
     padding: 0.22rem 0.55rem;
     border-radius: var(--radius-sm);
@@ -730,7 +728,6 @@ svg.lucide {
     white-space: nowrap;
 }
 
-/* Tabela */
 .modern-table {
     width: 100%;
     border-collapse: collapse;
@@ -767,12 +764,12 @@ svg.lucide {
     color: var(--text-muted);
 }
 
-/* ─── DOCK INFERIOR MOBILE (COM RESPIRO PARA QUINAS ARREDONDADAS) ─── */
+/* ─── DOCK INFERIOR MOBILE (RESPIRO PARA QUINAS ARREDONDADAS) ─── */
 .mobile-action-dock {
     position: fixed;
-    bottom: max(18px, calc(env(safe-area-inset-bottom) + 0.65rem));
-    left: max(16px, calc(env(safe-area-inset-left) + 0.5rem));
-    right: max(16px, calc(env(safe-area-inset-right) + 0.5rem));
+    bottom: max(22px, calc(env(safe-area-inset-bottom) + 0.85rem));
+    left: max(18px, calc(env(safe-area-inset-left) + 0.6rem));
+    right: max(18px, calc(env(safe-area-inset-right) + 0.6rem));
     z-index: 950;
     background: rgba(18, 22, 20, 0.94);
     backdrop-filter: blur(14px);
@@ -1052,6 +1049,11 @@ select.input-premium {
     max-width: 100%;
 }
 
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
 .btn-sm {
     height: 36px;
     padding: 0 0.75rem;
@@ -1067,13 +1069,13 @@ select.input-premium {
 }
 
 .btn-emerald { background: var(--brand-green); color: var(--ink-on-green); }
-.btn-emerald:hover { background: var(--brand-green-hover); }
+.btn-emerald:hover:not(:disabled) { background: var(--brand-green-hover); }
 .btn-outline { background: var(--bg-input); color: var(--text-main); border-color: var(--border-dark-strong); }
-.btn-outline:hover { border-color: var(--brand-green); }
+.btn-outline:hover:not(:disabled) { border-color: var(--brand-green); }
 .btn-danger { background: var(--rose); color: #fff; }
-.btn-danger:hover { background: #e11d48; }
+.btn-danger:hover:not(:disabled) { background: #e11d48; }
 .btn-ghost { background: transparent; color: var(--text-muted); }
-.btn-ghost:hover { background: rgba(255, 255, 255, 0.05); color: #fff; }
+.btn-ghost:hover:not(:disabled) { background: rgba(255, 255, 255, 0.05); color: #fff; }
 
 .btn-icon {
     background: var(--bg-dark-elevated);
@@ -1091,10 +1093,10 @@ select.input-premium {
 }
 
 .btn-icon svg.lucide { width: 14px; height: 14px; }
-.btn-icon:hover { color: var(--brand-green); border-color: var(--brand-green); }
-.btn-icon.danger:hover { color: var(--rose); border-color: var(--rose); }
+.btn-icon:hover:not(:disabled) { color: var(--brand-green); border-color: var(--brand-green); }
+.btn-icon.danger:hover:not(:disabled) { color: var(--rose); border-color: var(--rose); }
 
-/* ─── MODAIS / POP-UPS (SEM BARRA DE ROLAGEM, COM SAFE AREA E BLOQUEIO DE ZOOM) ─── */
+/* ─── MODAIS / POP-UPS ─── */
 .modal-overlay {
     position: fixed;
     inset: 0;
@@ -1106,10 +1108,10 @@ select.input-premium {
     z-index: 10000;
     opacity: 1;
     transition: opacity 0.2s ease;
-    padding-top: max(0.85rem, calc(env(safe-area-inset-top) + 0.5rem));
-    padding-right: max(0.85rem, calc(env(safe-area-inset-right) + 0.35rem));
-    padding-bottom: max(1.2rem, calc(env(safe-area-inset-bottom) + 0.75rem));
-    padding-left: max(0.85rem, calc(env(safe-area-inset-left) + 0.35rem));
+    padding-top: max(0.95rem, calc(env(safe-area-inset-top) + 0.6rem));
+    padding-right: max(0.95rem, calc(env(safe-area-inset-right) + 0.4rem));
+    padding-bottom: max(1.4rem, calc(env(safe-area-inset-bottom) + 0.9rem));
+    padding-left: max(0.95rem, calc(env(safe-area-inset-left) + 0.4rem));
     overflow: hidden;
     touch-action: pan-y;
 }
@@ -1126,7 +1128,7 @@ select.input-premium {
     width: 100%;
     border: 1px solid var(--border-dark-strong);
     box-shadow: var(--shadow-dark);
-    max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 2rem);
+    max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 2.2rem);
     overflow-y: auto;
     overflow-x: hidden;
     touch-action: pan-y;
@@ -1192,7 +1194,6 @@ select.input-premium {
 
 .btn-close-modal:hover { color: #fff; border-color: var(--rose); }
 
-/* Simulador */
 .resultado-box {
     background: var(--bg-input);
     border: 1px solid var(--border-dark);
@@ -1242,7 +1243,6 @@ select.input-premium {
 .status-warning { background: var(--amber); color: #061A0E; }
 .status-danger { background: var(--rose); color: #fff; }
 
-/* Utilitários */
 .hidden { display: none !important; }
 .hidden-smooth { opacity: 0; max-height: 0; overflow: hidden; pointer-events: none; transition: all 0.28s ease; }
 .show-smooth { opacity: 1; max-height: 1800px; padding-top: 4px; }
@@ -1250,12 +1250,11 @@ select.input-premium {
 .delay-1 { animation-delay: 0.05s; }
 @keyframes fadeInUp { to { opacity: 1; transform: translateY(0); } }
 
-/* Toasts */
 .toast-container {
     position: fixed;
-    bottom: calc(82px + env(safe-area-inset-bottom));
-    right: max(16px, calc(env(safe-area-inset-right) + 0.5rem));
-    left: max(16px, calc(env(safe-area-inset-left) + 0.5rem));
+    bottom: calc(88px + env(safe-area-inset-bottom));
+    right: max(18px, calc(env(safe-area-inset-right) + 0.6rem));
+    left: max(18px, calc(env(safe-area-inset-left) + 0.6rem));
     z-index: 10050;
     display: flex;
     flex-direction: column;
@@ -1299,7 +1298,7 @@ select.input-premium {
     .app-layout {
         padding-top: max(1.1rem, calc(env(safe-area-inset-top) + 0.5rem));
         padding-right: max(1.1rem, env(safe-area-inset-right));
-        padding-bottom: max(2.5rem, calc(env(safe-area-inset-bottom) + 1.5rem));
+        padding-bottom: max(2.6rem, calc(env(safe-area-inset-bottom) + 1.6rem));
         padding-left: max(1.1rem, env(safe-area-inset-left));
     }
     .mobile-action-dock { display: none; }
@@ -1310,7 +1309,7 @@ select.input-premium {
     .modern-form, .form-grid, .report-grid { grid-template-columns: 1fr 1fr; }
     .modal-content { padding: 1.65rem; }
     .toast-container {
-        bottom: max(24px, calc(env(safe-area-inset-bottom) + 1rem));
+        bottom: max(28px, calc(env(safe-area-inset-bottom) + 1.1rem));
         left: auto;
         align-items: flex-end;
         max-width: 380px;

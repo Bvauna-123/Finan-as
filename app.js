@@ -68,7 +68,7 @@ detectarTamanhoTela();
 window.addEventListener('resize', detectarTamanhoTela, { passive: true });
 window.addEventListener('orientationchange', () => setTimeout(detectarTamanhoTela, 120), { passive: true });
 
-// Bloqueador de zoom (pinça, duplo toque e Ctrl+roda do mouse, incluindo dentro dos pop-ups)
+// Bloqueador de zoom (pinça, duplo toque e Ctrl+roda do mouse)
 ['gesturestart', 'gesturechange', 'gestureend'].forEach(evtName => {
     document.addEventListener(evtName, (e) => e.preventDefault(), { passive: false });
 });
@@ -97,6 +97,9 @@ document.addEventListener('wheel', (e) => {
 
 let currentUserId = null;
 let cartoesUsuario = [];
+let categoriasUsuario = [];
+let transacoesCache = [];
+let rendaBaseCache = 0;
 let fotoCadastroBase64 = null;
 let deferredInstallPrompt = null;
 
@@ -104,6 +107,21 @@ const formatadorReal = new Intl.NumberFormat('pt-BR', { style: 'currency', curre
 let meuGrafico = null;
 let idEdicaoAtual = null;
 const PALETA_CORES = ['#22E56D', '#38BDF8', '#A78BFA', '#FBBF24', '#FB7185', '#34D399', '#818CF8', '#F472B6', '#2DD4BF', '#A3E635'];
+
+function setBotaoCarregando(btn, carregando, textoCarregando = 'Salvando...') {
+    if (!btn) return;
+    const span = btn.querySelector('span');
+    if (carregando) {
+        btn.disabled = true;
+        btn.dataset.textoOriginal = span ? span.textContent : '';
+        if (span) span.textContent = textoCarregando;
+    } else {
+        btn.disabled = false;
+        if (span && btn.dataset.textoOriginal) {
+            span.textContent = btn.dataset.textoOriginal;
+        }
+    }
+}
 
 function isAppInstalled() {
     return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
@@ -237,7 +255,7 @@ function showToast(mensagem, tipo = 'success') {
     setTimeout(() => {
         toast.style.animation = 'slideIn 0.25s reverse forwards';
         setTimeout(() => toast.remove(), 250);
-    }, 3000);
+    }, 2600);
 }
 
 function sincronizarRolagemModais() {
@@ -317,11 +335,13 @@ document.getElementById('btn-esqueci-senha').addEventListener('click', async () 
 
 document.getElementById('form-auth').addEventListener('submit', async (e) => {
     e.preventDefault();
+    const btnSubmit = document.getElementById('btn-auth-submit');
     const mode = document.querySelector('input[name="authMode"]:checked').value;
     const email = document.getElementById('auth-email').value.trim();
     const senha = document.getElementById('auth-senha').value;
     const nome = document.getElementById('auth-nome').value.trim();
 
+    setBotaoCarregando(btnSubmit, true, mode === 'register' ? 'Criando...' : 'Entrando...');
     try {
         if (mode === 'register') {
             const cred = await createUserWithEmailAndPassword(auth, email, senha);
@@ -353,6 +373,8 @@ document.getElementById('form-auth').addEventListener('submit', async (e) => {
         else if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') msg = "E-mail ou senha inválidos.";
         else if (error.code === 'auth/weak-password') msg = "A senha deve ter no mínimo 6 caracteres.";
         showToast(msg, "error");
+    } finally {
+        setBotaoCarregando(btnSubmit, false);
     }
 });
 
@@ -381,6 +403,9 @@ onAuthStateChanged(auth, async (user) => {
     } else {
         currentUserId = null;
         cartoesUsuario = [];
+        categoriasUsuario = [];
+        transacoesCache = [];
+        rendaBaseCache = 0;
         atualizarAvatarHeader("");
         if (meuGrafico) { meuGrafico.destroy(); meuGrafico = null; }
         appLayout.classList.add('hidden');
@@ -392,19 +417,23 @@ onAuthStateChanged(auth, async (user) => {
 // Modal de Foto de Perfil
 document.getElementById('btn-abrir-perfil').addEventListener('click', async () => {
     if (!currentUserId) return;
-    const snap = await getDoc(doc(db, "usuarios", currentUserId));
-    const fotoAtual = snap.exists() ? (snap.data().fotoUrl || "") : "";
-    document.getElementById('input-foto-url').value = fotoAtual.startsWith('http') ? fotoAtual : '';
-    document.getElementById('input-foto-arquivo').value = '';
-    document.getElementById('modal-foto-label').textContent = 'Escolher imagem';
-    const prev = document.getElementById('preview-foto-modal');
-    if (fotoAtual) {
-        prev.src = fotoAtual;
-        prev.classList.remove('hidden');
-    } else {
-        prev.classList.add('hidden');
-    }
     toggleModal('modal-perfil', 'open');
+    try {
+        const snap = await getDoc(doc(db, "usuarios", currentUserId));
+        const fotoAtual = snap.exists() ? (snap.data().fotoUrl || "") : "";
+        document.getElementById('input-foto-url').value = fotoAtual.startsWith('http') ? fotoAtual : '';
+        document.getElementById('input-foto-arquivo').value = '';
+        document.getElementById('modal-foto-label').textContent = 'Escolher imagem';
+        const prev = document.getElementById('preview-foto-modal');
+        if (fotoAtual) {
+            prev.src = fotoAtual;
+            prev.classList.remove('hidden');
+        } else {
+            prev.classList.add('hidden');
+        }
+    } catch (err) {
+        console.error(err);
+    }
 });
 
 document.getElementById('input-foto-arquivo').addEventListener('change', async (e) => {
@@ -421,24 +450,28 @@ document.getElementById('input-foto-arquivo').addEventListener('change', async (
 document.getElementById('form-foto-perfil').addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!currentUserId) return;
+    const btnSubmit = e.target.querySelector('button[type="submit"]');
     const fotoFinal = document.getElementById('input-foto-url').value.trim();
+
+    atualizarAvatarHeader(fotoFinal);
+    toggleModal('modal-perfil', 'close');
+    showToast("Foto de perfil atualizada.", "success");
+
+    setBotaoCarregando(btnSubmit, true, 'Salvando...');
     try {
         await setDoc(doc(db, "usuarios", currentUserId), { fotoUrl: fotoFinal }, { merge: true });
-        atualizarAvatarHeader(fotoFinal);
-        toggleModal('modal-perfil', 'close');
-        showToast("Foto de perfil atualizada.", "success");
     } catch {
-        showToast("Erro ao salvar foto.", "error");
+        showToast("Falha ao sincronizar foto na nuvem.", "error");
+    } finally {
+        setBotaoCarregando(btnSubmit, false);
     }
 });
 
-// Gerenciamento de Cartões de Crédito (no fluxo de lançamento)
-async function carregarCartoesUsuario(selecionarId = null) {
-    if (!currentUserId) return;
-    const snap = await getDoc(doc(db, "usuarios", currentUserId));
-    cartoesUsuario = snap.exists() && Array.isArray(snap.data().cartoes) ? snap.data().cartoes : [];
-
+// ─── CARTÕES DE CRÉDITO (RESPOSTA IMEDIATA) ───
+function aplicarCartoesNaTela(selecionarId = null) {
     const select = document.getElementById('cartao-id');
+    const valorAlvo = selecionarId !== null ? selecionarId : select.value;
+
     select.innerHTML = '<option value="">Selecione um cartão...</option>';
     cartoesUsuario.forEach(c => {
         const opt = document.createElement('option');
@@ -449,9 +482,10 @@ async function carregarCartoesUsuario(selecionarId = null) {
         opt.textContent = detalhes.length ? `${c.nome} (${detalhes.join(' • ')})` : c.nome;
         select.appendChild(opt);
     });
-    if (selecionarId) select.value = selecionarId;
+    if (valorAlvo) select.value = valorAlvo;
 
     renderizarListaCartoes();
+    renderizarFaturasDoMes();
 }
 
 function renderizarListaCartoes() {
@@ -510,9 +544,8 @@ function renderizarListaCartoes() {
     refreshIcons();
 }
 
-async function abrirModalCartoesDoFluxo() {
-    await carregarCartoesUsuario();
-    await atualizarDashboardMensal();
+function abrirModalCartoesDoFluxo() {
+    aplicarCartoesNaTela();
     toggleModal('modal-cartoes', 'open');
 }
 
@@ -521,39 +554,63 @@ document.getElementById('btn-atalho-novo-cartao').addEventListener('click', abri
 document.getElementById('form-novo-cartao').addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!currentUserId) return;
-    const nome = document.getElementById('input-nome-cartao').value.trim();
-    const fechamento = parseInt(document.getElementById('input-fechamento-cartao').value, 10) || null;
-    const vencimento = parseInt(document.getElementById('input-vencimento-cartao').value, 10) || null;
-    const cor = document.getElementById('input-cor-cartao').value || '#22E56D';
+
+    const btnSubmit = e.target.querySelector('button[type="submit"]');
+    const nomeInput = document.getElementById('input-nome-cartao');
+    const fechInput = document.getElementById('input-fechamento-cartao');
+    const vencInput = document.getElementById('input-vencimento-cartao');
+    const corInput = document.getElementById('input-cor-cartao');
+
+    const nome = nomeInput.value.trim();
+    const fechamento = parseInt(fechInput.value, 10) || null;
+    const vencimento = parseInt(vencInput.value, 10) || null;
+    const cor = corInput.value || '#22E56D';
     if (!nome) return;
 
+    const estadoAnterior = [...cartoesUsuario];
     const novoCartao = { id: 'card_' + Date.now(), nome, fechamento, vencimento, cor };
-    const atualizados = [...cartoesUsuario, novoCartao];
+    cartoesUsuario = [...cartoesUsuario, novoCartao];
 
+    nomeInput.value = '';
+    fechInput.value = '';
+    vencInput.value = '';
+    corInput.value = '#22e56d';
+
+    aplicarCartoesNaTela(novoCartao.id);
+    showToast("Cartão adicionado.", "success");
+
+    setBotaoCarregando(btnSubmit, true, 'Salvando...');
     try {
-        await setDoc(doc(db, "usuarios", currentUserId), { cartoes: atualizados }, { merge: true });
-        document.getElementById('form-novo-cartao').reset();
-        document.getElementById('input-cor-cartao').value = '#22e56d';
-        await carregarCartoesUsuario(novoCartao.id);
-        await atualizarDashboardMensal();
-        showToast("Cartão salvo com fechamento e vencimento.", "success");
+        await setDoc(doc(db, "usuarios", currentUserId), { cartoes: cartoesUsuario }, { merge: true });
     } catch {
-        showToast("Erro ao adicionar cartão.", "error");
+        cartoesUsuario = estadoAnterior;
+        aplicarCartoesNaTela();
+        showToast("Falha ao sincronizar cartão.", "error");
+    } finally {
+        setBotaoCarregando(btnSubmit, false);
     }
 });
 
 document.getElementById('lista-cartoes-container').addEventListener('click', async (e) => {
     const btn = e.target.closest('.btn-remover-cartao');
-    if (!btn || !currentUserId) return;
+    if (!btn || !currentUserId || btn.disabled) return;
+
     const idRemover = btn.dataset.id;
-    const filtrados = cartoesUsuario.filter(c => c.id !== idRemover);
+    const estadoAnterior = [...cartoesUsuario];
+
+    cartoesUsuario = cartoesUsuario.filter(c => c.id !== idRemover);
+    aplicarCartoesNaTela();
+    showToast("Cartão removido.", "success");
+
+    btn.disabled = true;
     try {
-        await setDoc(doc(db, "usuarios", currentUserId), { cartoes: filtrados }, { merge: true });
-        await carregarCartoesUsuario();
-        await atualizarDashboardMensal();
-        showToast("Cartão removido.", "success");
+        await setDoc(doc(db, "usuarios", currentUserId), { cartoes: cartoesUsuario }, { merge: true });
     } catch {
-        showToast("Erro ao remover cartão.", "error");
+        cartoesUsuario = estadoAnterior;
+        aplicarCartoesNaTela();
+        showToast("Falha ao remover cartão na nuvem.", "error");
+    } finally {
+        btn.disabled = false;
     }
 });
 
@@ -565,86 +622,147 @@ document.querySelectorAll('input[name="formaPagamento"]').forEach(radio => {
 });
 
 document.querySelectorAll('input[name="filtroMetodo"]').forEach(radio => {
-    radio.addEventListener('change', () => atualizarDashboardMensal());
+    radio.addEventListener('change', () => renderizarDashboardCache());
 });
 
-async function carregarCategoriasNoSelect(selecionarValor = null) {
-    if (!currentUserId) return;
-    const select = document.getElementById("categoria");
+// ─── CATEGORIAS (SEM PADRÕES, COM EXCLUSÃO E RESPOSTA IMEDIATA) ───
+function renderizarListaCategorias() {
+    const container = document.getElementById('lista-categorias-container');
+    if (!container) return;
+    container.innerHTML = '';
 
-    try {
-        const userSnap = await getDoc(doc(db, "usuarios", currentUserId));
-        const categoriasSalvas = userSnap.exists() && Array.isArray(userSnap.data().categorias)
-            ? userSnap.data().categorias
-            : [];
-        const unicas = [...new Set(categoriasSalvas)];
-
-        select.innerHTML = '';
-
-        const placeholderOpt = document.createElement('option');
-        placeholderOpt.value = '';
-        placeholderOpt.disabled = true;
-        placeholderOpt.selected = !selecionarValor;
-        placeholderOpt.textContent = unicas.length
-            ? 'Selecione uma categoria...'
-            : 'Nenhuma categoria cadastrada (use +)';
-        select.appendChild(placeholderOpt);
-
-        unicas.forEach(cat => {
-            const opt = document.createElement('option');
-            opt.value = cat;
-            opt.textContent = cat;
-            select.appendChild(opt);
-        });
-
-        if (selecionarValor && unicas.includes(selecionarValor)) {
-            select.value = selecionarValor;
-        }
-    } catch (e) {
-        console.error("Erro ao carregar categorias", e);
+    if (!categoriasUsuario.length) {
+        const p = document.createElement('p');
+        p.className = 'text-muted text-sm text-center';
+        p.textContent = 'Nenhuma categoria cadastrada.';
+        container.appendChild(p);
+        return;
     }
+
+    categoriasUsuario.forEach(cat => {
+        const div = document.createElement('div');
+        div.className = 'cartao-item';
+
+        const info = document.createElement('div');
+        const strong = document.createElement('strong');
+        strong.textContent = cat;
+        info.appendChild(strong);
+
+        const btnRem = document.createElement('button');
+        btnRem.type = 'button';
+        btnRem.className = 'btn-icon danger btn-remover-categoria';
+        btnRem.dataset.cat = cat;
+        btnRem.title = 'Excluir categoria';
+        btnRem.innerHTML = '<i data-lucide="trash-2"></i>';
+
+        div.appendChild(info);
+        div.appendChild(btnRem);
+        container.appendChild(div);
+    });
+
+    refreshIcons();
+}
+
+function aplicarCategoriasNaTela(selecionarValor = null) {
+    const select = document.getElementById("categoria");
+    const valorAlvo = selecionarValor !== null ? selecionarValor : select.value;
+    categoriasUsuario = [...new Set(categoriasUsuario)];
+
+    select.innerHTML = '';
+
+    const placeholderOpt = document.createElement('option');
+    placeholderOpt.value = '';
+    placeholderOpt.disabled = true;
+    placeholderOpt.selected = !valorAlvo || !categoriasUsuario.includes(valorAlvo);
+    placeholderOpt.textContent = categoriasUsuario.length
+        ? 'Selecione uma categoria...'
+        : 'Nenhuma categoria cadastrada (use +)';
+    select.appendChild(placeholderOpt);
+
+    categoriasUsuario.forEach(cat => {
+        const opt = document.createElement('option');
+        opt.value = cat;
+        opt.textContent = cat;
+        select.appendChild(opt);
+    });
+
+    if (valorAlvo && categoriasUsuario.includes(valorAlvo)) {
+        select.value = valorAlvo;
+    }
+
+    renderizarListaCategorias();
 }
 
 document.getElementById('btn-abrir-nova-cat').addEventListener('click', () => {
+    aplicarCategoriasNaTela();
     toggleModal('modal-nova-categoria', 'open');
 });
 
 document.getElementById('form-nova-categoria').addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!currentUserId) return;
-    const inputCat = document.getElementById('input-nova-cat').value.trim();
-    if (!inputCat) return;
 
-    const catFormatada = inputCat.charAt(0).toUpperCase() + inputCat.slice(1).toLowerCase();
+    const btnSubmit = e.target.querySelector('button[type="submit"]');
+    const inputEl = document.getElementById('input-nova-cat');
+    const raw = inputEl.value.trim();
+    if (!raw) return;
 
+    const catFormatada = raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
+    const estadoAnterior = [...categoriasUsuario];
+
+    if (!categoriasUsuario.includes(catFormatada)) {
+        categoriasUsuario = [...categoriasUsuario, catFormatada];
+    }
+
+    inputEl.value = '';
+    aplicarCategoriasNaTela(catFormatada);
+    showToast("Categoria adicionada.", "success");
+
+    setBotaoCarregando(btnSubmit, true, 'Salvando...');
     try {
-        const userRef = doc(db, "usuarios", currentUserId);
-        const userSnap = await getDoc(userRef);
-        let categorias = userSnap.exists() && userSnap.data().categorias ? userSnap.data().categorias : [];
-
-        if (!categorias.includes(catFormatada)) {
-            categorias.push(catFormatada);
-            await setDoc(userRef, { categorias: categorias }, { merge: true });
-        }
-
-        await carregarCategoriasNoSelect(catFormatada);
-        document.getElementById('input-nova-cat').value = '';
-        toggleModal('modal-nova-categoria', 'close');
-        showToast("Categoria criada.", "success");
+        await setDoc(doc(db, "usuarios", currentUserId), { categorias: categoriasUsuario }, { merge: true });
     } catch {
-        showToast("Erro ao criar categoria.", "error");
+        categoriasUsuario = estadoAnterior;
+        aplicarCategoriasNaTela();
+        showToast("Falha ao sincronizar categoria.", "error");
+    } finally {
+        setBotaoCarregando(btnSubmit, false);
     }
 });
 
-async function abrirModalLancamento() {
+document.getElementById('lista-categorias-container').addEventListener('click', async (e) => {
+    const btn = e.target.closest('.btn-remover-categoria');
+    if (!btn || !currentUserId || btn.disabled) return;
+
+    const catRemover = btn.dataset.cat;
+    const estadoAnterior = [...categoriasUsuario];
+
+    categoriasUsuario = categoriasUsuario.filter(c => c !== catRemover);
+    aplicarCategoriasNaTela();
+    showToast("Categoria excluída.", "success");
+
+    btn.disabled = true;
+    try {
+        await setDoc(doc(db, "usuarios", currentUserId), { categorias: categoriasUsuario }, { merge: true });
+    } catch {
+        categoriasUsuario = estadoAnterior;
+        aplicarCategoriasNaTela();
+        showToast("Falha ao excluir categoria na nuvem.", "error");
+    } finally {
+        btn.disabled = false;
+    }
+});
+
+// ─── ABRIR MODAIS ───
+function abrirModalLancamento() {
     idEdicaoAtual = null;
     document.getElementById("form-despesa").reset();
     document.getElementById("modal-lancamento-titulo").textContent = "Adicionar Lançamento";
     document.querySelector("#btn-submit-lancamento span").textContent = "Salvar Lançamento";
     document.getElementById("tipo-parcelada").click();
     document.getElementById("pag-debito").click();
-    await carregarCategoriasNoSelect();
-    await carregarCartoesUsuario();
+    aplicarCategoriasNaTela("");
+    aplicarCartoesNaTela("");
     toggleModal('modal-form-lancamento', 'open');
 }
 
@@ -657,249 +775,247 @@ document.getElementById('dock-btn-lancamento').addEventListener('click', abrirMo
 document.getElementById('btn-abrir-simulador').addEventListener('click', abrirModalSimulador);
 document.getElementById('dock-btn-simulador').addEventListener('click', abrirModalSimulador);
 
-async function atualizarDashboardMensal() {
-    if (!currentUserId) return;
+// ─── DASHBOARD E CACHE LOCAL ───
+function renderizarFaturasDoMes(gastosPorCartao = null) {
+    const faturasBox = document.getElementById("resumo-faturas-mes");
+    if (!faturasBox) return;
+
+    const mesConsulta = document.getElementById("consulta-mes").value;
+    const mapaCartoes = Object.fromEntries(cartoesUsuario.map(c => [c.id, c]));
+    let mapaGastos = gastosPorCartao;
+
+    if (!mapaGastos) {
+        mapaGastos = {};
+        if (mesConsulta) {
+            transacoesCache.forEach(despesa => {
+                const ehAtivaNoMes = despesa.isFixa
+                    ? (mesConsulta >= despesa.mesInicio)
+                    : (mesConsulta >= despesa.mesInicio && mesConsulta <= despesa.mesFim);
+                if (ehAtivaNoMes && (despesa.formaPagamento || 'debito') === 'credito') {
+                    const chave = despesa.cartaoId || 'sem_cartao';
+                    mapaGastos[chave] = (mapaGastos[chave] || 0) + despesa.valorParcela;
+                }
+            });
+        }
+    }
+
+    const entradasFatura = Object.entries(mapaGastos);
+    if (!entradasFatura.length) {
+        faturasBox.innerHTML = `<div class="faturas-box-title">Faturas do Mês</div><p class="text-muted text-sm">Sem gastos no crédito neste período.</p>`;
+    } else {
+        const linhasHtml = entradasFatura.map(([cardId, valor]) => {
+            const card = mapaCartoes[cardId];
+            const nomeCard = card ? card.nome : 'Cartão não especificado';
+            const vencTexto = card?.vencimento ? `Vence dia ${card.vencimento}` : 'Sem vencimento definido';
+            return `<div class="fatura-row"><div><strong>${nomeCard}</strong><div class="text-muted text-sm">${vencTexto}</div></div><strong>${formatadorReal.format(valor)}</strong></div>`;
+        }).join('');
+        faturasBox.innerHTML = `<div class="faturas-box-title">Faturas do Mês</div>${linhasHtml}`;
+    }
+}
+
+function renderizarDashboardCache() {
     const mesConsulta = document.getElementById("consulta-mes").value;
     if (!mesConsulta) return;
 
     const filtroMetodo = document.querySelector('input[name="filtroMetodo"]:checked')?.value || 'todos';
     const tbody = document.getElementById("lista-despesas-corpo");
     const emptyState = document.getElementById("empty-state");
+    const mapaCartoes = Object.fromEntries(cartoesUsuario.map(c => [c.id, c]));
 
-    try {
-        const userSnap = await getDoc(doc(db, "usuarios", currentUserId));
-        if (!userSnap.exists()) return;
-        const userData = userSnap.data();
-        const rendaMensal = userData.salarioBase || 0;
-        cartoesUsuario = Array.isArray(userData.cartoes) ? userData.cartoes : [];
-        const mapaCartoes = Object.fromEntries(cartoesUsuario.map(c => [c.id, c]));
+    let totalDespesasMes = 0;
+    let totalDebitoMes = 0;
+    let totalCreditoMes = 0;
+    let countLancamentos = 0;
+    let gastosCategoria = {};
+    let gastosPorCartao = {};
+    tbody.innerHTML = "";
 
-        const q = query(collection(db, "transacoes"), where("userId", "==", currentUserId));
-        const querySnapshot = await getDocs(q);
+    const dictCores = {};
+    let corIndex = 0;
 
-        let totalDespesasMes = 0;
-        let totalDebitoMes = 0;
-        let totalCreditoMes = 0;
-        let countLancamentos = 0;
-        let gastosCategoria = {};
-        let gastosPorCartao = {};
-        tbody.innerHTML = "";
+    transacoesCache.forEach((despesa) => {
+        const ehAtivaNoMes = despesa.isFixa
+            ? (mesConsulta >= despesa.mesInicio)
+            : (mesConsulta >= despesa.mesInicio && mesConsulta <= despesa.mesFim);
 
-        const dictCores = {};
-        let corIndex = 0;
-
-        querySnapshot.forEach((documento) => {
-            const despesa = documento.data();
-            const ehAtivaNoMes = despesa.isFixa ? (mesConsulta >= despesa.mesInicio) : (mesConsulta >= despesa.mesInicio && mesConsulta <= despesa.mesFim);
-
-            if (ehAtivaNoMes) {
-                const metodo = despesa.formaPagamento || 'debito';
-                if (metodo === 'credito') {
-                    totalCreditoMes += despesa.valorParcela;
-                    const chaveCartao = despesa.cartaoId || 'sem_cartao';
-                    gastosPorCartao[chaveCartao] = (gastosPorCartao[chaveCartao] || 0) + despesa.valorParcela;
-                } else {
-                    totalDebitoMes += despesa.valorParcela;
-                }
-
-                if (filtroMetodo !== 'todos' && metodo !== filtroMetodo) return;
-
-                countLancamentos++;
-                totalDespesasMes += despesa.valorParcela;
-
-                const cat = despesa.categoria || 'Outros';
-                if (gastosCategoria[cat] === undefined) gastosCategoria[cat] = 0;
-                gastosCategoria[cat] += despesa.valorParcela;
-
-                if (!dictCores[cat]) { dictCores[cat] = PALETA_CORES[corIndex % PALETA_CORES.length]; corIndex++; }
-
-                const progresso = despesa.isFixa
-                    ? "Fixa"
-                    : `${((new Date(mesConsulta + "-15").getFullYear() - new Date(despesa.mesInicio + "-15").getFullYear()) * 12) + (new Date(mesConsulta + "-15").getMonth() - new Date(despesa.mesInicio + "-15").getMonth()) + 1}/${despesa.parcelasTotal}`;
-
-                const cartaoObj = metodo === 'credito' && despesa.cartaoId ? mapaCartoes[despesa.cartaoId] : null;
-                const rotuloMetodo = metodo === 'credito'
-                    ? (cartaoObj ? cartaoObj.nome : 'Crédito')
-                    : 'Débito';
-
-                const tr = document.createElement("tr");
-
-                const tdDesc = document.createElement("td");
-                tdDesc.style.width = "34%";
-                const strongDesc = document.createElement("strong");
-                strongDesc.textContent = despesa.descricao;
-                strongDesc.style.display = "block";
-                strongDesc.style.overflow = "hidden";
-                strongDesc.style.textOverflow = "ellipsis";
-                strongDesc.style.whiteSpace = "nowrap";
-
-                const divRef = document.createElement("div");
-                divRef.className = "text-muted text-sm mt-1";
-                divRef.textContent = `Ref: ${progresso}`;
-                tdDesc.appendChild(strongDesc);
-                tdDesc.appendChild(divRef);
-
-                const tdCat = document.createElement("td");
-                tdCat.style.width = "28%";
-                const badge = document.createElement("span");
-                badge.className = "dynamic-badge";
-                badge.style.backgroundColor = dictCores[cat];
-                badge.textContent = cat;
-
-                const divMetodo = document.createElement("div");
-                divMetodo.className = "mt-1";
-                const mBadge = document.createElement("span");
-                mBadge.className = "metodo-badge";
-                if (cartaoObj?.cor) mBadge.style.borderColor = cartaoObj.cor;
-                mBadge.innerHTML = metodo === 'credito'
-                    ? `<i data-lucide="credit-card" style="width:12px;height:12px;"></i>`
-                    : `<i data-lucide="banknote" style="width:12px;height:12px;"></i>`;
-                const mText = document.createElement("span");
-                mText.textContent = rotuloMetodo;
-                mText.style.overflow = "hidden";
-                mText.style.textOverflow = "ellipsis";
-                mText.style.whiteSpace = "nowrap";
-                mBadge.appendChild(mText);
-                divMetodo.appendChild(mBadge);
-
-                tdCat.appendChild(badge);
-                tdCat.appendChild(divMetodo);
-
-                const tdValor = document.createElement("td");
-                tdValor.style.width = "22%";
-                tdValor.style.fontWeight = "700";
-                tdValor.style.whiteSpace = "nowrap";
-                tdValor.textContent = formatadorReal.format(despesa.valorParcela);
-
-                const tdAcoes = document.createElement("td");
-                tdAcoes.className = "text-right";
-                tdAcoes.style.width = "16%";
-                tdAcoes.style.whiteSpace = "nowrap";
-
-                const btnEditar = document.createElement("button");
-                btnEditar.type = "button";
-                btnEditar.className = "btn-icon btn-editar";
-                btnEditar.dataset.id = documento.id;
-                btnEditar.title = "Editar";
-                btnEditar.innerHTML = '<i data-lucide="pencil"></i>';
-
-                const btnExcluir = document.createElement("button");
-                btnExcluir.type = "button";
-                btnExcluir.className = "btn-icon danger btn-excluir";
-                btnExcluir.dataset.id = documento.id;
-                btnExcluir.title = "Excluir";
-                btnExcluir.style.marginLeft = "4px";
-                btnExcluir.innerHTML = '<i data-lucide="trash-2"></i>';
-
-                tdAcoes.appendChild(btnEditar);
-                tdAcoes.appendChild(btnExcluir);
-
-                tr.appendChild(tdDesc);
-                tr.appendChild(tdCat);
-                tr.appendChild(tdValor);
-                tr.appendChild(tdAcoes);
-                tbody.appendChild(tr);
+        if (ehAtivaNoMes) {
+            const metodo = despesa.formaPagamento || 'debito';
+            if (metodo === 'credito') {
+                totalCreditoMes += despesa.valorParcela;
+                const chaveCartao = despesa.cartaoId || 'sem_cartao';
+                gastosPorCartao[chaveCartao] = (gastosPorCartao[chaveCartao] || 0) + despesa.valorParcela;
+            } else {
+                totalDebitoMes += despesa.valorParcela;
             }
-        });
 
-        refreshIcons();
+            if (filtroMetodo !== 'todos' && metodo !== filtroMetodo) return;
 
-        const ctx = document.getElementById('categoryChart').getContext('2d');
-        if (meuGrafico) meuGrafico.destroy();
+            countLancamentos++;
+            totalDespesasMes += despesa.valorParcela;
 
-        if (countLancamentos > 0) {
-            const labels = Object.keys(gastosCategoria);
-            const dataColors = labels.map(label => dictCores[label]);
+            const cat = despesa.categoria || 'Outros';
+            if (gastosCategoria[cat] === undefined) gastosCategoria[cat] = 0;
+            gastosCategoria[cat] += despesa.valorParcela;
 
-            meuGrafico = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        data: Object.values(gastosCategoria),
-                        backgroundColor: dataColors,
-                        borderWidth: 0,
-                        hoverOffset: 4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    cutout: '72%',
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                            labels: { color: '#9AA6A0', boxWidth: 10, padding: 12 }
-                        }
+            if (!dictCores[cat]) { dictCores[cat] = PALETA_CORES[corIndex % PALETA_CORES.length]; corIndex++; }
+
+            const progresso = despesa.isFixa
+                ? "Fixa"
+                : `${((new Date(mesConsulta + "-15").getFullYear() - new Date(despesa.mesInicio + "-15").getFullYear()) * 12) + (new Date(mesConsulta + "-15").getMonth() - new Date(despesa.mesInicio + "-15").getMonth()) + 1}/${despesa.parcelasTotal}`;
+
+            const cartaoObj = metodo === 'credito' && despesa.cartaoId ? mapaCartoes[despesa.cartaoId] : null;
+            const rotuloMetodo = metodo === 'credito'
+                ? (cartaoObj ? cartaoObj.nome : 'Crédito')
+                : 'Débito';
+
+            const tr = document.createElement("tr");
+
+            const tdDesc = document.createElement("td");
+            tdDesc.style.width = "34%";
+            const strongDesc = document.createElement("strong");
+            strongDesc.textContent = despesa.descricao;
+            strongDesc.style.display = "block";
+            strongDesc.style.overflow = "hidden";
+            strongDesc.style.textOverflow = "ellipsis";
+            strongDesc.style.whiteSpace = "nowrap";
+
+            const divRef = document.createElement("div");
+            divRef.className = "text-muted text-sm mt-1";
+            divRef.textContent = `Ref: ${progresso}`;
+            tdDesc.appendChild(strongDesc);
+            tdDesc.appendChild(divRef);
+
+            const tdCat = document.createElement("td");
+            tdCat.style.width = "28%";
+            const badge = document.createElement("span");
+            badge.className = "dynamic-badge";
+            badge.style.backgroundColor = dictCores[cat];
+            badge.textContent = cat;
+
+            const divMetodo = document.createElement("div");
+            divMetodo.className = "mt-1";
+            const mBadge = document.createElement("span");
+            mBadge.className = "metodo-badge";
+            if (cartaoObj?.cor) mBadge.style.borderColor = cartaoObj.cor;
+            mBadge.innerHTML = metodo === 'credito'
+                ? `<i data-lucide="credit-card" style="width:12px;height:12px;"></i>`
+                : `<i data-lucide="banknote" style="width:12px;height:12px;"></i>`;
+            const mText = document.createElement("span");
+            mText.textContent = rotuloMetodo;
+            mText.style.overflow = "hidden";
+            mText.style.textOverflow = "ellipsis";
+            mText.style.whiteSpace = "nowrap";
+            mBadge.appendChild(mText);
+            divMetodo.appendChild(mBadge);
+
+            tdCat.appendChild(badge);
+            tdCat.appendChild(divMetodo);
+
+            const tdValor = document.createElement("td");
+            tdValor.style.width = "22%";
+            tdValor.style.fontWeight = "700";
+            tdValor.style.whiteSpace = "nowrap";
+            tdValor.textContent = formatadorReal.format(despesa.valorParcela);
+
+            const tdAcoes = document.createElement("td");
+            tdAcoes.className = "text-right";
+            tdAcoes.style.width = "16%";
+            tdAcoes.style.whiteSpace = "nowrap";
+
+            const btnEditar = document.createElement("button");
+            btnEditar.type = "button";
+            btnEditar.className = "btn-icon btn-editar";
+            btnEditar.dataset.id = despesa.id;
+            btnEditar.title = "Editar";
+            btnEditar.innerHTML = '<i data-lucide="pencil"></i>';
+
+            const btnExcluir = document.createElement("button");
+            btnExcluir.type = "button";
+            btnExcluir.className = "btn-icon danger btn-excluir";
+            btnExcluir.dataset.id = despesa.id;
+            btnExcluir.title = "Excluir";
+            btnExcluir.style.marginLeft = "4px";
+            btnExcluir.innerHTML = '<i data-lucide="trash-2"></i>';
+
+            tdAcoes.appendChild(btnEditar);
+            tdAcoes.appendChild(btnExcluir);
+
+            tr.appendChild(tdDesc);
+            tr.appendChild(tdCat);
+            tr.appendChild(tdValor);
+            tr.appendChild(tdAcoes);
+            tbody.appendChild(tr);
+        }
+    });
+
+    refreshIcons();
+
+    const ctx = document.getElementById('categoryChart').getContext('2d');
+    if (meuGrafico) meuGrafico.destroy();
+
+    if (countLancamentos > 0) {
+        const labels = Object.keys(gastosCategoria);
+        const dataColors = labels.map(label => dictCores[label]);
+
+        meuGrafico = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: Object.values(gastosCategoria),
+                    backgroundColor: dataColors,
+                    borderWidth: 0,
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '72%',
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { color: '#9AA6A0', boxWidth: 10, padding: 12 }
                     }
                 }
-            });
-            document.querySelector('.chart-container').classList.remove('hidden');
-            emptyState.classList.add('hidden');
-            document.querySelector('.modern-table').classList.remove('hidden');
-        } else {
-            document.querySelector('.chart-container').classList.add('hidden');
-            emptyState.classList.remove('hidden');
-            document.querySelector('.modern-table').classList.add('hidden');
-        }
-
-        const saldoLivre = rendaMensal - totalDespesasMes;
-        const percentualComprometido = rendaMensal > 0 ? Math.round((totalDespesasMes / rendaMensal) * 100) : 0;
-        const larguraBarra = Math.min(100, Math.max(0, percentualComprometido));
-
-        document.getElementById("dash-renda").textContent = formatadorReal.format(rendaMensal);
-        document.getElementById("dash-despesas").textContent = formatadorReal.format(totalDespesasMes);
-        document.getElementById("dash-detalhe-metodos").textContent = `Débito: ${formatadorReal.format(totalDebitoMes)} • Crédito: ${formatadorReal.format(totalCreditoMes)}`;
-        document.getElementById("dash-saldo").textContent = formatadorReal.format(saldoLivre);
-        document.getElementById("dash-comprometimento").textContent = `${percentualComprometido}%`;
-
-        const barraEl = document.getElementById("dash-comprometimento-bar");
-        barraEl.style.width = `${larguraBarra}%`;
-        barraEl.classList.toggle("over-limit", percentualComprometido > 100);
-
-        const faturasBox = document.getElementById("resumo-faturas-mes");
-        const entradasFatura = Object.entries(gastosPorCartao);
-        if (!entradasFatura.length) {
-            faturasBox.innerHTML = `<div class="faturas-box-title">Faturas do Mês</div><p class="text-muted text-sm">Sem gastos no crédito neste período.</p>`;
-        } else {
-            const linhasHtml = entradasFatura.map(([cardId, valor]) => {
-                const card = mapaCartoes[cardId];
-                const nomeCard = card ? card.nome : 'Cartão não especificado';
-                const vencTexto = card?.vencimento ? `Vence dia ${card.vencimento}` : 'Sem vencimento definido';
-                return `<div class="fatura-row"><div><strong>${nomeCard}</strong><div class="text-muted text-sm">${vencTexto}</div></div><strong>${formatadorReal.format(valor)}</strong></div>`;
-            }).join('');
-            faturasBox.innerHTML = `<div class="faturas-box-title">Faturas do Mês</div>${linhasHtml}`;
-        }
-
-    } catch {
-        showToast("Erro ao carregar dados.", "error");
+            }
+        });
+        document.querySelector('.chart-container').classList.remove('hidden');
+        emptyState.classList.add('hidden');
+        document.querySelector('.modern-table').classList.remove('hidden');
+    } else {
+        document.querySelector('.chart-container').classList.add('hidden');
+        emptyState.classList.remove('hidden');
+        document.querySelector('.modern-table').classList.add('hidden');
     }
+
+    const saldoLivre = rendaBaseCache - totalDespesasMes;
+    const percentualComprometido = rendaBaseCache > 0 ? Math.round((totalDespesasMes / rendaBaseCache) * 100) : 0;
+    const larguraBarra = Math.min(100, Math.max(0, percentualComprometido));
+
+    document.getElementById("dash-renda").textContent = formatadorReal.format(rendaBaseCache);
+    document.getElementById("dash-despesas").textContent = formatadorReal.format(totalDespesasMes);
+    document.getElementById("dash-detalhe-metodos").textContent = `Débito: ${formatadorReal.format(totalDebitoMes)} • Crédito: ${formatadorReal.format(totalCreditoMes)}`;
+    document.getElementById("dash-saldo").textContent = formatadorReal.format(saldoLivre);
+    document.getElementById("dash-comprometimento").textContent = `${percentualComprometido}%`;
+
+    const barraEl = document.getElementById("dash-comprometimento-bar");
+    barraEl.style.width = `${larguraBarra}%`;
+    barraEl.classList.toggle("over-limit", percentualComprometido > 100);
+
+    renderizarFaturasDoMes(gastosPorCartao);
 }
 
-function mudarMes(delta) {
-    const input = document.getElementById('consulta-mes');
-    if (!input.value) return;
-    const date = new Date(input.value + '-15');
-    date.setMonth(date.getMonth() + delta);
-    input.value = date.toISOString().substring(0, 7);
-    atualizarDashboardMensal();
-}
-document.getElementById('btn-prev-month').addEventListener('click', () => mudarMes(-1));
-document.getElementById('btn-next-month').addEventListener('click', () => mudarMes(1));
-document.getElementById("consulta-mes").addEventListener("change", atualizarDashboardMensal);
-
-async function inicializarApp() {
+async function sincronizarDadosFirestore() {
     if (!currentUserId) return;
-    const hoje = new Date();
-    const mesAtual = hoje.getFullYear() + "-" + String(hoje.getMonth() + 1).padStart(2, '0');
-    if (!document.getElementById("consulta-mes").value) document.getElementById("consulta-mes").value = mesAtual;
-
     try {
         const userSnap = await getDoc(doc(db, "usuarios", currentUserId));
         if (userSnap.exists()) {
             const dados = userSnap.data();
+            rendaBaseCache = dados.salarioBase || 0;
             atualizarAvatarHeader(dados.fotoUrl || "");
             cartoesUsuario = Array.isArray(dados.cartoes) ? dados.cartoes : [];
+            categoriasUsuario = Array.isArray(dados.categorias) ? [...new Set(dados.categorias)] : [];
 
             if (dados.salarioBase) {
                 document.getElementById("renda-valor-display").textContent = formatadorReal.format(dados.salarioBase);
@@ -911,12 +1027,46 @@ async function inicializarApp() {
                 document.getElementById("form-usuario").classList.remove("hidden");
                 document.getElementById("btn-cancelar-renda").classList.add("hidden");
             }
-            atualizarDashboardMensal();
         }
-    } catch (error) { console.error(error); }
+
+        const q = query(collection(db, "transacoes"), where("userId", "==", currentUserId));
+        const querySnapshot = await getDocs(q);
+        const lista = [];
+        querySnapshot.forEach((documento) => {
+            lista.push({ id: documento.id, ...documento.data() });
+        });
+        transacoesCache = lista;
+
+        aplicarCategoriasNaTela();
+        aplicarCartoesNaTela();
+        renderizarDashboardCache();
+    } catch {
+        showToast("Erro ao sincronizar dados.", "error");
+    }
+}
+
+function mudarMes(delta) {
+    const input = document.getElementById('consulta-mes');
+    if (!input.value) return;
+    const date = new Date(input.value + '-15');
+    date.setMonth(date.getMonth() + delta);
+    input.value = date.toISOString().substring(0, 7);
+    renderizarDashboardCache();
+}
+document.getElementById('btn-prev-month').addEventListener('click', () => mudarMes(-1));
+document.getElementById('btn-next-month').addEventListener('click', () => mudarMes(1));
+document.getElementById("consulta-mes").addEventListener("change", renderizarDashboardCache);
+
+async function inicializarApp() {
+    if (!currentUserId) return;
+    const hoje = new Date();
+    const mesAtual = hoje.getFullYear() + "-" + String(hoje.getMonth() + 1).padStart(2, '0');
+    if (!document.getElementById("consulta-mes").value) document.getElementById("consulta-mes").value = mesAtual;
+    await sincronizarDadosFirestore();
 }
 
 document.getElementById("btn-editar-renda").addEventListener("click", () => {
+    document.getElementById("salario").value = rendaBaseCache || '';
     document.getElementById("renda-view").classList.add("hidden");
     document.getElementById("form-usuario").classList.remove("hidden");
 });
@@ -959,16 +1109,34 @@ document.getElementById('grupo-parcelada').classList.add('show-smooth');
 document.getElementById("form-usuario").addEventListener("submit", async (e) => {
     e.preventDefault();
     if (!currentUserId) return;
+    const btnSubmit = e.target.querySelector('button[type="submit"]');
     const salario = parseFloat(document.getElementById("salario").value);
-    await setDoc(doc(db, "usuarios", currentUserId), { salarioBase: salario, atualizadoEm: new Date().toISOString() }, { merge: true });
+    if (Number.isNaN(salario)) return;
+
+    rendaBaseCache = salario;
+    document.getElementById("renda-valor-display").textContent = formatadorReal.format(salario);
+    document.getElementById("renda-view").classList.remove("hidden");
+    document.getElementById("form-usuario").classList.add("hidden");
+    document.getElementById("btn-cancelar-renda").classList.remove("hidden");
+    renderizarDashboardCache();
     showToast("Renda atualizada no Zedona.", "success");
-    inicializarApp();
+
+    setBotaoCarregando(btnSubmit, true, 'Salvando...');
+    try {
+        await setDoc(doc(db, "usuarios", currentUserId), { salarioBase: salario, atualizadoEm: new Date().toISOString() }, { merge: true });
+    } catch {
+        showToast("Falha ao sincronizar renda.", "error");
+    } finally {
+        setBotaoCarregando(btnSubmit, false);
+    }
 });
 
 document.getElementById("form-despesa").addEventListener("submit", async (e) => {
     e.preventDefault();
     if (!currentUserId) return;
-    const descricao = document.getElementById("descricao").value;
+
+    const btnSubmit = document.getElementById("btn-submit-lancamento");
+    const descricao = document.getElementById("descricao").value.trim();
     const mesInicio = document.getElementById("mes-inicio").value;
     const categoria = document.getElementById("categoria").value;
     const isFixa = (document.querySelector('input[name="tipoDespesa"]:checked').value === 'fixa');
@@ -984,7 +1152,7 @@ document.getElementById("form-despesa").addEventListener("submit", async (e) => 
         mesFim = null;
     } else {
         valorTotal = parseFloat(document.getElementById("valor-total").value);
-        parcelasTotal = parseInt(document.getElementById("parcelas").value);
+        parcelasTotal = parseInt(document.getElementById("parcelas").value, 10);
         valorParcela = valorTotal / parcelasTotal;
         const dataInicio = new Date(mesInicio + "-15T00:00:00");
         const dataFim = new Date(dataInicio);
@@ -1007,21 +1175,35 @@ document.getElementById("form-despesa").addEventListener("submit", async (e) => 
         atualizadoEm: new Date().toISOString()
     };
 
+    const estadoAnterior = [...transacoesCache];
+    const idEditando = idEdicaoAtual;
+
+    if (idEditando) {
+        transacoesCache = transacoesCache.map(item => item.id === idEditando ? { ...item, ...payload } : item);
+    } else {
+        transacoesCache = [{ id: 'temp_' + Date.now(), ...payload }, ...transacoesCache];
+    }
+
+    document.getElementById("form-despesa").reset();
+    toggleModal('modal-form-lancamento', 'close');
+    renderizarDashboardCache();
+    showToast(idEditando ? "Lançamento atualizado." : "Lançamento salvo.", "success");
+
+    setBotaoCarregando(btnSubmit, true, 'Salvando...');
     try {
-        if (idEdicaoAtual) {
-            await updateDoc(doc(db, "transacoes", idEdicaoAtual), payload);
-            showToast("Lançamento atualizado.", "success");
+        if (idEditando) {
+            await updateDoc(doc(db, "transacoes", idEditando), payload);
         } else {
             payload.dataCadastro = new Date().toISOString();
-            await addDoc(collection(db, "transacoes"), payload);
-            showToast("Lançamento salvo.", "success");
+            const docRef = await addDoc(collection(db, "transacoes"), payload);
+            transacoesCache = transacoesCache.map(item => item.id.startsWith('temp_') && item.atualizadoEm === payload.atualizadoEm ? { ...item, id: docRef.id } : item);
         }
-
-        document.getElementById("form-despesa").reset();
-        toggleModal('modal-form-lancamento', 'close');
-        atualizarDashboardMensal();
     } catch {
-        showToast("Erro ao salvar lançamento.", "error");
+        transacoesCache = estadoAnterior;
+        renderizarDashboardCache();
+        showToast("Falha ao sincronizar lançamento na nuvem.", "error");
+    } finally {
+        setBotaoCarregando(btnSubmit, false);
     }
 });
 
@@ -1030,47 +1212,52 @@ document.getElementById("lista-despesas-corpo").addEventListener("click", async 
     const btnEditar = e.target.closest('.btn-editar');
 
     if (btnExcluir) {
+        const idExcluir = btnExcluir.getAttribute("data-id");
         showConfirmModal(async () => {
-            await deleteDoc(doc(db, "transacoes", btnExcluir.getAttribute("data-id")));
+            const estadoAnterior = [...transacoesCache];
+            transacoesCache = transacoesCache.filter(item => item.id !== idExcluir);
+            renderizarDashboardCache();
             showToast("Lançamento excluído.", "success");
-            atualizarDashboardMensal();
+
+            try {
+                await deleteDoc(doc(db, "transacoes", idExcluir));
+            } catch {
+                transacoesCache = estadoAnterior;
+                renderizarDashboardCache();
+                showToast("Falha ao excluir lançamento na nuvem.", "error");
+            }
         });
     }
 
     if (btnEditar) {
         idEdicaoAtual = btnEditar.getAttribute("data-id");
-        try {
-            const docSnap = await getDoc(doc(db, "transacoes", idEdicaoAtual));
-            if (docSnap.exists()) {
-                const data = docSnap.data();
-                document.getElementById("descricao").value = data.descricao;
-                document.getElementById("mes-inicio").value = data.mesInicio;
+        const data = transacoesCache.find(item => item.id === idEdicaoAtual);
+        if (!data) return;
 
-                await carregarCategoriasNoSelect(data.categoria);
-                await carregarCartoesUsuario(data.cartaoId || "");
+        document.getElementById("descricao").value = data.descricao;
+        document.getElementById("mes-inicio").value = data.mesInicio;
 
-                if ((data.formaPagamento || 'debito') === 'credito') {
-                    document.getElementById("pag-credito").click();
-                } else {
-                    document.getElementById("pag-debito").click();
-                }
+        aplicarCategoriasNaTela(data.categoria || "");
+        aplicarCartoesNaTela(data.cartaoId || "");
 
-                if (data.isFixa) {
-                    document.getElementById("tipo-fixa").click();
-                    document.getElementById("valor-mensal-fixo").value = data.valorParcela;
-                } else {
-                    document.getElementById("tipo-parcelada").click();
-                    document.getElementById("valor-total").value = data.valorTotal;
-                    document.getElementById("parcelas").value = data.parcelasTotal;
-                }
-
-                document.getElementById("modal-lancamento-titulo").textContent = "Editar Lançamento";
-                document.querySelector("#btn-submit-lancamento span").textContent = "Atualizar Lançamento";
-                toggleModal('modal-form-lancamento', 'open');
-            }
-        } catch {
-            showToast("Erro ao carregar lançamento.", "error");
+        if ((data.formaPagamento || 'debito') === 'credito') {
+            document.getElementById("pag-credito").click();
+        } else {
+            document.getElementById("pag-debito").click();
         }
+
+        if (data.isFixa) {
+            document.getElementById("tipo-fixa").click();
+            document.getElementById("valor-mensal-fixo").value = data.valorParcela;
+        } else {
+            document.getElementById("tipo-parcelada").click();
+            document.getElementById("valor-total").value = data.valorTotal;
+            document.getElementById("parcelas").value = data.parcelasTotal;
+        }
+
+        document.getElementById("modal-lancamento-titulo").textContent = "Editar Lançamento";
+        document.querySelector("#btn-submit-lancamento span").textContent = "Atualizar Lançamento";
+        toggleModal('modal-form-lancamento', 'open');
     }
 });
 
@@ -1078,68 +1265,54 @@ document.getElementById("form-simulador").addEventListener("submit", async (e) =
     e.preventDefault();
     if (!currentUserId) return;
     const valorTotal = parseFloat(document.getElementById("sim-valor").value);
-    const parcelas = parseInt(document.getElementById("sim-parcelas").value);
+    const parcelas = parseInt(document.getElementById("sim-parcelas").value, 10);
     const mesInicio = document.getElementById("sim-mes").value;
     const resultadoBox = document.getElementById("resultado-simulacao");
     const valorNovaParcela = valorTotal / parcelas;
 
     resultadoBox.classList.remove("hidden-smooth");
     resultadoBox.classList.add("show-smooth");
-    resultadoBox.innerHTML = "<p class='text-center text-muted'>Analisando cenários financeiros...</p>";
 
-    try {
-        const userSnap = await getDoc(doc(db, "usuarios", currentUserId));
-        if (!userSnap.exists()) return;
-        const rendaMensal = userSnap.data().salarioBase || 0;
+    let menorSaldo = rendaBaseCache;
+    let mesMaisCritico = "";
+    let mesesNegativos = 0;
+    const dataInicio = new Date(mesInicio + "-15T00:00:00");
 
-        const q = query(collection(db, "transacoes"), where("userId", "==", currentUserId));
-        const querySnapshot = await getDocs(q);
-        const todasDespesas = [];
-        querySnapshot.forEach(doc => todasDespesas.push(doc.data()));
+    for (let i = 0; i < parcelas; i++) {
+        const dataSimulada = new Date(dataInicio);
+        dataSimulada.setMonth(dataSimulada.getMonth() + i);
+        const mesSimuladoStr = dataSimulada.toISOString().substring(0, 7);
 
-        let menorSaldo = rendaMensal;
-        let mesMaisCritico = "";
-        let mesesNegativos = 0;
-        const dataInicio = new Date(mesInicio + "-15T00:00:00");
-
-        for (let i = 0; i < parcelas; i++) {
-            const dataSimulada = new Date(dataInicio);
-            dataSimulada.setMonth(dataSimulada.getMonth() + i);
-            const mesSimuladoStr = dataSimulada.toISOString().substring(0, 7);
-
-            let despesasMes = 0;
-            todasDespesas.forEach(despesa => {
-                if (despesa.isFixa ? (mesSimuladoStr >= despesa.mesInicio) : (mesSimuladoStr >= despesa.mesInicio && mesSimuladoStr <= despesa.mesFim)) {
-                    despesasMes += despesa.valorParcela;
-                }
-            });
-
-            const saldoNoMes = rendaMensal - (despesasMes + valorNovaParcela);
-            if (saldoNoMes < menorSaldo) {
-                menorSaldo = saldoNoMes;
-                mesMaisCritico = `${mesSimuladoStr.split('-')[1]}/${mesSimuladoStr.split('-')[0]}`;
+        let despesasMes = 0;
+        transacoesCache.forEach(despesa => {
+            if (despesa.isFixa ? (mesSimuladoStr >= despesa.mesInicio) : (mesSimuladoStr >= despesa.mesInicio && mesSimuladoStr <= despesa.mesFim)) {
+                despesasMes += despesa.valorParcela;
             }
-            if (saldoNoMes < 0) mesesNegativos++;
+        });
+
+        const saldoNoMes = rendaBaseCache - (despesasMes + valorNovaParcela);
+        if (saldoNoMes < menorSaldo) {
+            menorSaldo = saldoNoMes;
+            mesMaisCritico = `${mesSimuladoStr.split('-')[1]}/${mesSimuladoStr.split('-')[0]}`;
         }
-
-        const impactoRenda = rendaMensal > 0 ? ((valorNovaParcela / rendaMensal) * 100).toFixed(1) : "0.0";
-        let statusHtml = "";
-
-        if (mesesNegativos > 0) statusHtml = `<div class="status-bar status-danger">Compra inviável: déficit previsto em ${mesesNegativos} mês(es).</div>`;
-        else if (menorSaldo < (rendaMensal * 0.1)) statusHtml = `<div class="status-bar status-warning">Atenção: margem livre muito baixa no pior mês.</div>`;
-        else statusHtml = `<div class="status-bar status-safe">Compra viável: margem livre confortável garantida.</div>`;
-
-        resultadoBox.innerHTML = `
-            <h3 style="font-size: 0.95rem; color: #fff; border-bottom: 1px solid var(--border-dark); padding-bottom: 8px;">Relatório Analítico Zedona</h3>
-            <div class="report-grid">
-                <div class="report-item"><span class="report-label">Valor da Parcela</span><span class="report-value">${formatadorReal.format(valorNovaParcela)}</span></div>
-                <div class="report-item"><span class="report-label">Impacto na Renda</span><span class="report-value text-rose">${impactoRenda}%</span></div>
-                <div class="report-item"><span class="report-label">Pior Cenário</span><span class="report-value">${mesMaisCritico || '-'}</span></div>
-                <div class="report-item"><span class="report-label">Saldo no Pior Mês</span><span class="report-value ${menorSaldo < 0 ? 'text-rose' : 'text-emerald'}">${formatadorReal.format(menorSaldo)}</span></div>
-            </div>
-            ${statusHtml}
-        `;
-    } catch {
-        resultadoBox.innerHTML = "<p class='text-center text-rose'>Erro ao processar simulação.</p>";
+        if (saldoNoMes < 0) mesesNegativos++;
     }
+
+    const impactoRenda = rendaBaseCache > 0 ? ((valorNovaParcela / rendaBaseCache) * 100).toFixed(1) : "0.0";
+    let statusHtml = "";
+
+    if (mesesNegativos > 0) statusHtml = `<div class="status-bar status-danger">Compra inviável: déficit previsto em ${mesesNegativos} mês(es).</div>`;
+    else if (menorSaldo < (rendaBaseCache * 0.1)) statusHtml = `<div class="status-bar status-warning">Atenção: margem livre muito baixa no pior mês.</div>`;
+    else statusHtml = `<div class="status-bar status-safe">Compra viável: margem livre confortável garantida.</div>`;
+
+    resultadoBox.innerHTML = `
+        <h3 style="font-size: 0.95rem; color: #fff; border-bottom: 1px solid var(--border-dark); padding-bottom: 8px;">Relatório Analítico Zedona</h3>
+        <div class="report-grid">
+            <div class="report-item"><span class="report-label">Valor da Parcela</span><span class="report-value">${formatadorReal.format(valorNovaParcela)}</span></div>
+            <div class="report-item"><span class="report-label">Impacto na Renda</span><span class="report-value text-rose">${impactoRenda}%</span></div>
+            <div class="report-item"><span class="report-label">Pior Cenário</span><span class="report-value">${mesMaisCritico || '-'}</span></div>
+            <div class="report-item"><span class="report-label">Saldo no Pior Mês</span><span class="report-value ${menorSaldo < 0 ? 'text-rose' : 'text-emerald'}">${formatadorReal.format(menorSaldo)}</span></div>
+        </div>
+        ${statusHtml}
+    `;
 });

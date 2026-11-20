@@ -166,7 +166,7 @@
                             <span class="field-prefix dark-prefix">R$</span>
                             <input type="number" id="salario" class="input-dark-inline has-prefix" step="0.01" placeholder="3500.00" required>
                         </div>
-                        <button type="submit" class="btn btn-dark-solid btn-sm">Salvar</button>
+                        <button type="submit" class="btn btn-dark-solid btn-sm"><span>Salvar</span></button>
                         <button type="button" id="btn-cancelar-renda" class="btn btn-ghost-dark btn-sm hidden">Cancelar</button>
                     </form>
                 </div>
@@ -336,9 +336,9 @@
                     <label class="label-premium" for="categoria">Categoria</label>
                     <div class="inline-action-group">
                         <select id="categoria" class="input-premium" required>
-                            <option value="" disabled selected>Selecione...</option>
+                            <option value="" disabled selected>Nenhuma categoria cadastrada (use +)</option>
                         </select>
-                        <button type="button" id="btn-abrir-nova-cat" class="btn btn-outline btn-square" title="Nova Categoria">
+                        <button type="button" id="btn-abrir-nova-cat" class="btn btn-outline btn-square" title="Gerenciar Categorias">
                             <i data-lucide="plus"></i>
                         </button>
                     </div>
@@ -443,18 +443,18 @@
         </div>
     </div>
 
-    <!-- Modal Nova Categoria -->
+    <!-- Modal Gerenciar Categorias -->
     <div id="modal-nova-categoria" class="modal-overlay hidden" style="z-index: 10005;">
-        <div class="modal-content" style="max-width: 360px;">
+        <div class="modal-content" style="max-width: 380px;">
             <div class="modal-header">
-                <h2>Nova Categoria</h2>
+                <h2>Categorias</h2>
                 <button type="button" class="btn-close-modal btn-fechar" aria-label="Fechar">
                     <i data-lucide="x"></i>
                 </button>
             </div>
             <form id="form-nova-categoria" class="form-stack mt-4">
                 <div class="form-group">
-                    <label class="label-premium" for="input-nova-cat">Nome da Categoria</label>
+                    <label class="label-premium" for="input-nova-cat">Nova Categoria</label>
                     <input type="text" id="input-nova-cat" class="input-premium" placeholder="Ex: Farmácia, Estudos..." required>
                 </div>
                 <button type="submit" class="btn btn-emerald w-100 mt-2">
@@ -462,6 +462,7 @@
                     <span>Adicionar Categoria</span>
                 </button>
             </form>
+            <div id="lista-categorias-container" class="mt-4"></div>
         </div>
     </div>
 
