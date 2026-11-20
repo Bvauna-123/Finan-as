@@ -2,293 +2,274 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="mobile-web-app-capable" content="yes">
-    <title>FluxoPróximo | Minha carteira</title>
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FluxoPróximo | Dashboard Premium</title>
+    
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#1e1f30">
+    <meta name="theme-color" content="#4f46e5">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
-
+    
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <div class="wallet-shell">
-        <!-- Topo estilo imagem: botão esquerdo, título central, sino/alerta direito com badge -->
-        <header class="top-header">
-            <button id="btn-mes-anterior-top" class="header-sq-btn" type="button" title="Mês anterior" aria-label="Mês anterior">‹</button>
-            <div class="header-center-group">
-                <h1 class="header-title">Minha carteira</h1>
-                <input type="month" id="consulta-mes" class="header-month-input" aria-label="Mês de consulta">
-            </div>
-            <button id="btn-mes-seguinte-top" class="header-sq-btn badge-host" type="button" title="Próximo mês" aria-label="Próximo mês">
-                <span>›</span>
-                <span id="badge-qtd-itens" class="notif-badge">0</span>
-            </button>
-        </header>
 
-        <!-- Comutador Principal estilo imagem: "My icons" / "My Card" -> "Visão geral" / "Meu cartão" -->
-        <div class="segment-top" role="tablist">
-            <button id="tab-visao" class="segment-top-btn active" type="button" role="tab" aria-selected="true">Visão geral</button>
-            <button id="tab-cartao" class="segment-top-btn" type="button" role="tab" aria-selected="false">Meu cartão</button>
+    <!-- Tela de Login / Cadastro -->
+    <div id="auth-screen" class="auth-screen">
+        <div class="card auth-card shadow-xl">
+            <div class="header-titles" style="justify-content: center; margin-bottom: 1rem;">
+                <div class="logo-icon">✨</div>
+                <div>
+                    <h1 class="page-title">FluxoPróximo</h1>
+                    <p class="page-subtitle">Acesse sua conta ou crie um cadastro</p>
+                </div>
+            </div>
+
+            <div class="segmented-control" style="margin-bottom: 1rem;">
+                <input type="radio" id="auth-mode-login" name="authMode" value="login" checked>
+                <label for="auth-mode-login">Entrar</label>
+                <input type="radio" id="auth-mode-register" name="authMode" value="register">
+                <label for="auth-mode-register">Cadastrar</label>
+                <div class="segmented-highlight"></div>
+            </div>
+
+            <form id="form-auth" class="form-grid" style="grid-template-columns: 1fr;">
+                <div id="grupo-nome-cadastro" class="form-group hidden">
+                    <label class="label-premium">Seu Nome</label>
+                    <input type="text" id="auth-nome" class="input-premium" placeholder="Ex: Bruno">
+                </div>
+                <div class="form-group">
+                    <label class="label-premium">E-mail</label>
+                    <input type="email" id="auth-email" class="input-premium" placeholder="voce@email.com" required>
+                </div>
+                <div class="form-group">
+                    <label class="label-premium">Senha</label>
+                    <input type="password" id="auth-senha" class="input-premium" placeholder="Mínimo 6 caracteres" minlength="6" required>
+                </div>
+                <button type="submit" id="btn-auth-submit" class="btn-primary w-100 mt-2">Entrar</button>
+            </form>
         </div>
-
-        <!-- Faixa de categorias com pontos coloridos (estilo BTC: 29% / ETH: 24% / ADA: 16%) -->
-        <div class="metrics-strip" id="pills-strip" aria-label="Categorias e distribuição">
-            <button type="button" class="metric-chip active" data-cat="TODAS">
-                <span class="chip-dot dot-orange"></span>
-                <span>Todas</span>
-            </button>
-        </div>
-
-        <!-- Formulário inline para editar renda base -->
-        <form id="form-usuario" class="renda-drawer hidden">
-            <input type="number" id="salario" class="app-input" step="0.01" min="0" inputmode="decimal" placeholder="Renda mensal (ex: 3500.00)" required>
-            <button type="submit" class="btn-grad-action">Salvar</button>
-            <button type="button" id="btn-cancelar-renda" class="btn-ghost-action">Fechar</button>
-        </form>
-
-        <!-- TELA 1: Anel Circular Gradiente + 4 Ações Rápidas + Lista de Lançamentos -->
-        <section id="vista-visao" class="screen-panel">
-            <div class="donut-hero">
-                <div class="donut-ring">
-                    <div class="donut-hole">
-                        <span class="donut-label">Saldo livre</span>
-                        <strong id="dash-saldo" class="donut-value">R$ 0,00</strong>
-                        <span id="dash-renda-sub" class="donut-sub">Renda: R$ 0,00</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 4 Botões de Ação estilo Receive / Send / To buy / Change -->
-            <div class="action-row-4">
-                <button id="btn-abrir-lancamento" class="action-tile" type="button">
-                    <span class="action-tile-icon">↙</span>
-                    <span class="action-tile-text">Novo</span>
-                </button>
-                <button id="btn-abrir-simulador" class="action-tile" type="button">
-                    <span class="action-tile-icon">↗</span>
-                    <span class="action-tile-text">Simular</span>
-                </button>
-                <button id="btn-toggle-renda" class="action-tile" type="button">
-                    <span class="action-tile-icon">＋</span>
-                    <span class="action-tile-text">Renda</span>
-                </button>
-                <button id="btn-alternar-grafico" class="action-tile" type="button">
-                    <span class="action-tile-icon">◎</span>
-                    <span class="action-tile-text">Gráfico</span>
-                </button>
-            </div>
-
-            <div id="grafico-box" class="chart-panel hidden">
-                <canvas id="categoryChart"></canvas>
-            </div>
-
-            <!-- Lista de Lançamentos estilo Assets (ícone esquerdo, título/subtítulo, valor/detalhe direito) -->
-            <div class="list-block">
-                <div class="list-top-meta">
-                    <span class="list-heading">Lançamentos</span>
-                    <div class="list-right-tools">
-                        <button id="btn-abrir-nova-cat-rapida" class="mini-filter-btn" type="button">+ Categoria</button>
-                        <span id="dash-despesas-label" class="list-sum">R$ 0,00</span>
-                    </div>
-                </div>
-
-                <div id="lista-despesas-corpo" class="items-list"></div>
-
-                <div id="empty-state" class="empty-card hidden">
-                    Sem lançamentos registrados neste mês.
-                </div>
-            </div>
-        </section>
-
-        <!-- TELA 2: Saldo/Renda Destaque + Cartão Gradiente Laranja/Rosa/Roxo + Abas + Histórico -->
-        <section id="vista-cartao" class="screen-panel hidden">
-            <div class="card-screen-head">
-                <div class="card-screen-balance">
-                    <div id="dash-renda-destaque" class="card-balance-main">R$ 0,00</div>
-                    <div id="dash-saldo-destaque" class="card-balance-sub">Saldo livre: R$ 0,00</div>
-                </div>
-                <div class="card-screen-actions">
-                    <button id="btn-editar-renda-cartao" class="round-tool-btn" type="button" title="Editar renda" aria-label="Editar renda">✎</button>
-                    <button id="btn-abrir-simulador-cartao" class="round-tool-btn" type="button" title="Simular compra" aria-label="Simular compra">↗</button>
-                    <button id="btn-novo-lancamento-cartao" class="round-tool-btn" type="button" title="Novo lançamento" aria-label="Novo lançamento">＋</button>
-                </div>
-            </div>
-
-            <!-- Cartão Gradiente estilo BANEXCOIN -->
-            <div class="visual-card">
-                <div class="vcard-row-top">
-                    <span class="vcard-brand">◈ FLUXOPRÓXIMO</span>
-                    <span class="vcard-nfc">)))</span>
-                </div>
-                <div class="vcard-balance" id="gcard-despesas">R$ 0,00</div>
-                <div class="vcard-row-bottom">
-                    <div class="vcard-field">
-                        <small>Mês</small>
-                        <span id="gcard-mes">--/----</span>
-                    </div>
-                    <div class="vcard-field">
-                        <small>Lançamentos</small>
-                        <span id="gcard-qtd">0</span>
-                    </div>
-                    <div class="vcard-emblem" aria-hidden="true">
-                        <span></span><span></span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 3 Abas estilo Deposit / Withdraw / Purchases -->
-            <div class="filter-tabs-3">
-                <button type="button" class="filter-tab-btn active" data-filtro-tipo="TODOS">Todos</button>
-                <button type="button" class="filter-tab-btn" data-filtro-tipo="PARCELADA">Parcelados</button>
-                <button type="button" class="filter-tab-btn" data-filtro-tipo="FIXA">Contas fixas</button>
-            </div>
-
-            <div id="lista-despesas-cartao" class="items-list"></div>
-        </section>
-
-        <!-- Barra Inferior Fixa estilo imagem com botão central gradiente -->
-        <nav class="dock-bar" aria-label="Navegação principal">
-            <button id="nav-home" class="dock-item active" type="button" title="Início" aria-label="Início">
-                <span class="dock-glyph">⌂</span>
-                <span class="dock-label">Início</span>
-            </button>
-            <button id="nav-card" class="dock-item" type="button" title="Cartão" aria-label="Cartão">
-                <span class="dock-glyph">▣</span>
-                <span class="dock-label">Cartão</span>
-            </button>
-            <button id="nav-center-add" class="dock-center-fab" type="button" title="Novo lançamento" aria-label="Novo lançamento">
-                ⇅
-            </button>
-            <button id="nav-sim" class="dock-item" type="button" title="Simulador" aria-label="Simulador">
-                <span class="dock-glyph">↗</span>
-                <span class="dock-label">Simular</span>
-            </button>
-            <button id="nav-income" class="dock-item" type="button" title="Renda" aria-label="Renda">
-                <span class="dock-glyph">⚙</span>
-                <span class="dock-label">Renda</span>
-            </button>
-        </nav>
     </div>
 
-    <!-- Modal: Novo / Editar Lançamento -->
-    <div id="modal-form-lancamento" class="sheet-backdrop hidden">
-        <div class="sheet-card">
-            <div class="sheet-head">
-                <h2 id="modal-lancamento-titulo">Adicionar lançamento</h2>
-                <button type="button" class="sheet-close btn-fechar" aria-label="Fechar">✕</button>
+    <!-- Aplicação Principal -->
+    <div class="app-layout hidden">
+        <main class="main-content">
+            
+            <header class="topbar animate-fade-in">
+                <div class="header-titles">
+                    <div class="logo-icon">✨</div>
+                    <div>
+                        <h1 class="page-title">FluxoPróximo</h1>
+                        <p class="page-subtitle" id="usuario-subtitulo">Seu controle financeiro inteligente</p>
+                    </div>
+                </div>
+                
+                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                    <div class="renda-widget shadow-hover" id="renda-widget-container">
+                        <div id="renda-view" class="renda-view hidden">
+                            <span class="renda-label">Renda Base</span>
+                            <strong id="renda-valor-display">R$ 0,00</strong>
+                            <button id="btn-editar-renda" class="btn-icon" title="Editar">✏️</button>
+                        </div>
+                        <form id="form-usuario" class="renda-form hidden">
+                            <div class="input-with-icon">
+                                <span class="icon">R$</span>
+                                <input type="number" id="salario" class="input-premium" step="0.01" placeholder="3500.00" required>
+                            </div>
+                            <button type="submit" class="btn-primary btn-sm">Salvar</button>
+                            <button type="button" id="btn-cancelar-renda" class="btn-ghost btn-sm hidden">Cancelar</button>
+                        </form>
+                    </div>
+                    <button id="btn-logout" class="btn-outline btn-sm" title="Sair da conta">Sair</button>
+                </div>
+            </header>
+
+            <div class="action-bar animate-fade-in delay-1">
+                <button id="btn-abrir-lancamento" class="btn-primary shadow-hover"><span class="icon-text">➕</span> Novo Lançamento</button>
+                <button id="btn-abrir-simulador" class="btn-dark shadow-hover"><span class="icon-text">🔮</span> Simular Compra</button>
             </div>
-            <form id="form-despesa" class="sheet-form">
-                <div class="sheet-seg">
-                    <button type="button" id="seg-parcelada" class="sheet-seg-btn active">Parcelada</button>
-                    <button type="button" id="seg-fixa" class="sheet-seg-btn">Conta fixa</button>
-                    <input type="radio" id="tipo-parcelada" name="tipoDespesa" value="parcelada" checked hidden>
-                    <input type="radio" id="tipo-fixa" name="tipoDespesa" value="fixa" hidden>
-                </div>
 
-                <div class="sheet-field">
-                    <label for="descricao">Descrição</label>
-                    <input type="text" id="descricao" class="app-input" placeholder="Ex: Monitor, Academia..." required>
-                </div>
-
-                <div id="grupo-parcelada" class="sheet-row-2">
-                    <div class="sheet-field">
-                        <label for="valor-total">Valor da parcela (R$)</label>
-                        <input type="number" id="valor-total" class="app-input" step="0.01" min="0.01" inputmode="decimal" required>
-                    </div>
-                    <div class="sheet-field">
-                        <label for="parcelas">Parcelas</label>
-                        <input type="number" id="parcelas" class="app-input" min="1" step="1" inputmode="numeric" required>
+            <section class="card projection-card animate-fade-in delay-2 shadow-hover mt-4">
+                <div class="card-header border-none" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                    <h2>Visão Mensal</h2>
+                    <div class="month-navigator">
+                        <button id="btn-prev-month" class="nav-arrow" title="Mês Anterior">❮</button>
+                        <input type="month" id="consulta-mes" class="pill-input premium-select">
+                        <button id="btn-next-month" class="nav-arrow" title="Próximo Mês">❯</button>
                     </div>
                 </div>
 
-                <div id="grupo-fixa" class="sheet-field hidden">
-                    <label for="valor-mensal-fixo">Valor mensal (R$)</label>
-                    <input type="number" id="valor-mensal-fixo" class="app-input" step="0.01" min="0.01" inputmode="decimal">
-                </div>
-
-                <div class="sheet-row-2">
-                    <div class="sheet-field">
-                        <label for="mes-inicio">Mês de início</label>
-                        <input type="month" id="mes-inicio" class="app-input" required>
+                <div id="dashboard-mensal" class="dashboard hidden-smooth mt-2">
+                    <div class="metrics-grid">
+                        <div class="metric-box bg-slate">
+                            <div class="metric-icon-wrap text-emerald">📈</div>
+                            <div>
+                                <span>Receita Projetada</span>
+                                <h3 id="dash-renda">R$ 0,00</h3>
+                            </div>
+                        </div>
+                        <div class="metric-box bg-slate">
+                            <div class="metric-icon-wrap text-rose">📉</div>
+                            <div>
+                                <span>Total em Despesas</span>
+                                <h3 id="dash-despesas">R$ 0,00</h3>
+                            </div>
+                        </div>
+                        <div class="metric-box balance-box shadow-lg" id="card-saldo">
+                            <div class="metric-icon-wrap text-white">💰</div>
+                            <div>
+                                <span>Saldo Livre</span>
+                                <h3 id="dash-saldo">R$ 0,00</h3>
+                            </div>
+                        </div>
                     </div>
-                    <div class="sheet-field">
-                        <label for="categoria">Categoria</label>
-                        <div class="select-plus-wrap">
-                            <select id="categoria" class="app-input" required></select>
-                            <button type="button" id="btn-abrir-nova-cat" class="plus-sq-btn" title="Nova categoria" aria-label="Nova categoria">+</button>
+
+                    <div class="dashboard-content-grid mt-4">
+                        <div class="chart-container card-outline hidden">
+                            <h3 class="chart-title">Distribuição de Gastos</h3>
+                            <div style="position: relative; height: 250px; width: 100%; display: flex; justify-content: center;">
+                                <canvas id="categoryChart"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="table-container card-outline">
+                            <table class="modern-table">
+                                <thead>
+                                    <tr>
+                                        <th>Descrição</th>
+                                        <th>Categoria</th>
+                                        <th>Valor</th>
+                                        <th class="text-right">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="lista-despesas-corpo"></tbody>
+                            </table>
+                            <div id="empty-state" class="empty-state hidden">
+                                <div class="empty-icon">🍃</div>
+                                <h4>Tudo Limpo!</h4>
+                                <p>Seu fluxo de caixa está livre neste mês.</p>
+                            </div>
                         </div>
                     </div>
                 </div>
-
-                <button type="submit" id="btn-submit-lancamento" class="btn-grad-full">Salvar lançamento</button>
-            </form>
-        </div>
+            </section>
+        </main>
     </div>
 
-    <!-- Modal: Nova Categoria -->
-    <div id="modal-nova-categoria" class="sheet-backdrop hidden">
-        <div class="sheet-card sheet-compact">
-            <div class="sheet-head">
-                <h2>Nova categoria</h2>
-                <button type="button" class="sheet-close btn-fechar" aria-label="Fechar">✕</button>
+    <div id="modal-form-lancamento" class="modal-overlay hidden">
+        <div class="modal-content form-modal shadow-xl">
+            <div class="modal-header">
+                <h2 id="modal-lancamento-titulo">Adicionar Lançamento</h2>
+                <button class="btn-close-modal btn-fechar">✖</button>
             </div>
-            <form id="form-nova-categoria" class="sheet-form">
-                <div class="sheet-field">
-                    <label for="input-nova-cat">Nome da categoria</label>
-                    <input type="text" id="input-nova-cat" class="app-input" placeholder="Ex: Saúde, Estudos..." required>
-                </div>
-                <button type="submit" class="btn-grad-full">Criar categoria</button>
-            </form>
-        </div>
-    </div>
-
-    <!-- Modal: Simulador de Compra -->
-    <div id="modal-form-simulador" class="sheet-backdrop hidden">
-        <div class="sheet-card">
-            <div class="sheet-head">
-                <h2>Simulador de compra</h2>
-                <button type="button" class="sheet-close btn-fechar" aria-label="Fechar">✕</button>
-            </div>
-            <form id="form-simulador" class="sheet-form">
-                <div class="sheet-field">
-                    <label for="sim-valor">Valor da parcela (R$)</label>
-                    <input type="number" id="sim-valor" class="app-input" step="0.01" min="0.01" inputmode="decimal" required>
-                </div>
-                <div class="sheet-row-2">
-                    <div class="sheet-field">
-                        <label for="sim-parcelas">Parcelas</label>
-                        <input type="number" id="sim-parcelas" class="app-input" min="1" step="1" inputmode="numeric" required>
-                    </div>
-                    <div class="sheet-field">
-                        <label for="sim-mes">A partir de</label>
-                        <input type="month" id="sim-mes" class="app-input" required>
+            <form id="form-despesa" class="modern-form mt-4">
+                <div class="form-group full-width">
+                    <div class="segmented-control">
+                        <input type="radio" id="tipo-parcelada" name="tipoDespesa" value="parcelada" checked>
+                        <label for="tipo-parcelada">Parcelada</label>
+                        <input type="radio" id="tipo-fixa" name="tipoDespesa" value="fixa">
+                        <label for="tipo-fixa">Conta Fixa</label>
+                        <div class="segmented-highlight"></div>
                     </div>
                 </div>
-                <button type="submit" class="btn-grad-full">Calcular impacto</button>
+                <div class="form-group full-width">
+                    <label class="label-premium">O que é?</label>
+                    <input type="text" id="descricao" class="input-premium" placeholder="Ex: Monitor Ultrawide" required>
+                </div>
+                <div id="dynamic-fields-container" class="full-width dynamic-container">
+                    <div id="grupo-parcelada" class="form-grid">
+                        <div class="form-group">
+                            <label class="label-premium">Valor Total</label>
+                            <div class="input-with-icon"><span class="icon">R$</span><input type="number" id="valor-total" class="input-premium" step="0.01"></div>
+                        </div>
+                        <div class="form-group">
+                            <label class="label-premium">Qtd. Parcelas</label>
+                            <input type="number" id="parcelas" class="input-premium" min="1">
+                        </div>
+                    </div>
+                    <div id="grupo-fixa" class="form-group hidden-smooth">
+                        <label class="label-premium">Valor Mensal</label>
+                        <div class="input-with-icon"><span class="icon">R$</span><input type="number" id="valor-mensal-fixo" class="input-premium" step="0.01"></div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="label-premium">Mês de Início</label>
+                    <input type="month" id="mes-inicio" class="input-premium" required>
+                </div>
+                <div class="form-group">
+                    <label class="label-premium">Categoria</label>
+                    <div style="display: flex; gap: 8px;">
+                        <select id="categoria" class="input-premium" required style="flex: 1;">
+                            <option value="" disabled selected>Selecione...</option>
+                        </select>
+                        <button type="button" id="btn-abrir-nova-cat" class="btn-outline" title="Criar Nova Categoria" style="padding: 0 1rem; border-radius: 8px;">➕</button>
+                    </div>
+                </div>
+                <div class="form-actions full-width mt-3">
+                    <button type="submit" id="btn-submit-lancamento" class="btn-primary w-100">Salvar Lançamento</button>
+                </div>
             </form>
-            <div id="resultado-simulacao" class="sim-output hidden"></div>
         </div>
     </div>
 
-    <!-- Modal de Confirmação na Interface -->
-    <div id="modal-confirmacao" class="sheet-backdrop hidden">
-        <div class="sheet-card sheet-compact">
-            <h2 id="modal-titulo">Excluir lançamento?</h2>
-            <p id="modal-mensagem" class="sheet-copy">Esta ação recalcula o saldo do mês e as projeções seguintes.</p>
-            <div class="sheet-confirm-row">
-                <button type="button" id="btn-modal-cancelar" class="btn-ghost-action">Cancelar</button>
-                <button type="button" id="btn-modal-confirmar" class="btn-danger-action">Excluir</button>
+    <div id="modal-nova-categoria" class="modal-overlay hidden" style="z-index: 10005;">
+        <div class="modal-content shadow-xl" style="max-width: 350px;">
+            <div class="modal-header">
+                <h2>Nova Categoria</h2>
+                <button class="btn-close-modal btn-fechar">✖</button>
+            </div>
+            <form id="form-nova-categoria" class="mt-4" style="text-align: left;">
+                <div class="form-group">
+                    <label class="label-premium">Nome da Categoria</label>
+                    <input type="text" id="input-nova-cat" class="input-premium" placeholder="Ex: Farmácia, Estudos..." required>
+                </div>
+                <button type="submit" class="btn-primary w-100 mt-3">Adicionar Categoria</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="modal-form-simulador" class="modal-overlay hidden">
+        <div class="modal-content form-modal shadow-xl" style="max-width: 500px;">
+            <div class="modal-header">
+                <div>
+                    <h2>Simulador Financeiro</h2>
+                    <p class="text-muted text-sm mt-1">Análise de risco para novas dívidas</p>
+                </div>
+                <button class="btn-close-modal btn-fechar" style="align-self: flex-start;">✖</button>
+            </div>
+            <form id="form-simulador" class="modern-form mt-4">
+                <div class="form-group full-width">
+                    <label class="label-premium">Valor da Nova Compra</label>
+                    <div class="input-with-icon"><span class="icon">R$</span><input type="number" id="sim-valor" class="input-premium" step="0.01" required></div>
+                </div>
+                <div class="form-group">
+                    <label class="label-premium">Parcelas</label>
+                    <input type="number" id="sim-parcelas" class="input-premium" min="1" required>
+                </div>
+                <div class="form-group">
+                    <label class="label-premium">A partir de</label>
+                    <input type="month" id="sim-mes" class="input-premium" required>
+                </div>
+                <div class="form-actions full-width mt-2">
+                    <button type="submit" class="btn-dark w-100">Gerar Relatório de Viabilidade</button>
+                </div>
+            </form>
+            <div id="resultado-simulacao" class="resultado-box hidden-smooth mt-4"></div>
+        </div>
+    </div>
+
+    <div id="toast-container" class="toast-container"></div>
+    <div id="modal-confirmacao" class="modal-overlay hidden" style="z-index: 10002;">
+        <div class="modal-content alert-modal shadow-xl">
+            <div class="modal-icon text-rose">🗑️</div>
+            <h3 id="modal-titulo">Excluir Lançamento?</h3>
+            <p id="modal-mensagem" class="text-muted mt-2">Isso recalculará todas as suas projeções futuras.</p>
+            <div class="modal-actions mt-4" style="display: flex; gap: 10px; justify-content: center;">
+                <button id="btn-modal-cancelar" class="btn-ghost">Cancelar</button>
+                <button id="btn-modal-confirmar" class="btn-danger">Excluir</button>
             </div>
         </div>
     </div>
-
-    <!-- Notificações na Interface -->
-    <div id="toast-container" class="toast-stack" aria-live="polite"></div>
 
     <script type="module" src="app.js"></script>
 </body>
