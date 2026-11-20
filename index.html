@@ -2,11 +2,14 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>FluxoPróximo | Dashboard Premium</title>
     
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#4f46e5">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     
@@ -38,6 +41,13 @@
                     <label class="label-premium">Seu Nome</label>
                     <input type="text" id="auth-nome" class="input-premium" placeholder="Ex: Bruno">
                 </div>
+                <div id="grupo-foto-cadastro" class="form-group hidden">
+                    <label class="label-premium">Foto de Perfil (Opcional)</label>
+                    <div class="avatar-upload-row">
+                        <img id="preview-foto-cadastro" class="avatar-preview hidden" alt="Prévia da foto">
+                        <input type="file" id="auth-foto-file" class="input-premium" accept="image/*">
+                    </div>
+                </div>
                 <div class="form-group">
                     <label class="label-premium">E-mail</label>
                     <input type="email" id="auth-email" class="input-premium" placeholder="voce@email.com" required>
@@ -47,6 +57,7 @@
                     <input type="password" id="auth-senha" class="input-premium" placeholder="Mínimo 6 caracteres" minlength="6" required>
                 </div>
                 <button type="submit" id="btn-auth-submit" class="btn-primary w-100 mt-2">Entrar</button>
+                <button type="button" id="btn-esqueci-senha" class="btn-ghost btn-sm w-100 mt-1">Esqueci minha senha</button>
             </form>
         </div>
     </div>
@@ -57,14 +68,17 @@
             
             <header class="topbar animate-fade-in">
                 <div class="header-titles">
-                    <div class="logo-icon">✨</div>
+                    <div class="perfil-avatar-wrap" id="btn-abrir-perfil" title="Alterar foto ou dados do perfil">
+                        <img id="header-avatar-img" class="header-avatar hidden" alt="Foto do usuário">
+                        <div id="header-avatar-fallback" class="logo-icon">✨</div>
+                    </div>
                     <div>
                         <h1 class="page-title">FluxoPróximo</h1>
                         <p class="page-subtitle" id="usuario-subtitulo">Seu controle financeiro inteligente</p>
                     </div>
                 </div>
                 
-                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                <div class="topbar-controls">
                     <div class="renda-widget shadow-hover" id="renda-widget-container">
                         <div id="renda-view" class="renda-view hidden">
                             <span class="renda-label">Renda Base</span>
@@ -80,6 +94,8 @@
                             <button type="button" id="btn-cancelar-renda" class="btn-ghost btn-sm hidden">Cancelar</button>
                         </form>
                     </div>
+                    <button id="btn-abrir-cartoes" class="btn-outline btn-sm" title="Gerenciar Cartões">💳 Cartões</button>
+                    <button id="btn-instalar-app-topbar" class="btn-outline btn-sm hidden" title="Instalar Aplicativo">📲 Instalar</button>
                     <button id="btn-logout" class="btn-outline btn-sm" title="Sair da conta">Sair</button>
                 </div>
             </header>
@@ -91,7 +107,17 @@
 
             <section class="card projection-card animate-fade-in delay-2 shadow-hover mt-4">
                 <div class="card-header border-none" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
-                    <h2>Visão Mensal</h2>
+                    <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                        <h2>Visão Mensal</h2>
+                        <div class="segmented-control metodo-filtro-control">
+                            <input type="radio" id="filtro-todos" name="filtroMetodo" value="todos" checked>
+                            <label for="filtro-todos">Todos</label>
+                            <input type="radio" id="filtro-debito" name="filtroMetodo" value="debito">
+                            <label for="filtro-debito">Débito</label>
+                            <input type="radio" id="filtro-credito" name="filtroMetodo" value="credito">
+                            <label for="filtro-credito">Crédito</label>
+                        </div>
+                    </div>
                     <div class="month-navigator">
                         <button id="btn-prev-month" class="nav-arrow" title="Mês Anterior">❮</button>
                         <input type="month" id="consulta-mes" class="pill-input premium-select">
@@ -113,6 +139,7 @@
                             <div>
                                 <span>Total em Despesas</span>
                                 <h3 id="dash-despesas">R$ 0,00</h3>
+                                <small class="text-muted text-sm" id="dash-detalhe-metodos">Débito: R$ 0,00 • Crédito: R$ 0,00</small>
                             </div>
                         </div>
                         <div class="metric-box balance-box shadow-lg" id="card-saldo">
@@ -137,7 +164,7 @@
                                 <thead>
                                     <tr>
                                         <th>Descrição</th>
-                                        <th>Categoria</th>
+                                        <th>Categoria / Pagamento</th>
                                         <th>Valor</th>
                                         <th class="text-right">Ações</th>
                                     </tr>
@@ -156,6 +183,7 @@
         </main>
     </div>
 
+    <!-- Modal de Lançamento -->
     <div id="modal-form-lancamento" class="modal-overlay hidden">
         <div class="modal-content form-modal shadow-xl">
             <div class="modal-header">
@@ -164,6 +192,7 @@
             </div>
             <form id="form-despesa" class="modern-form mt-4">
                 <div class="form-group full-width">
+                    <label class="label-premium">Tipo de Lançamento</label>
                     <div class="segmented-control">
                         <input type="radio" id="tipo-parcelada" name="tipoDespesa" value="parcelada" checked>
                         <label for="tipo-parcelada">Parcelada</label>
@@ -172,6 +201,28 @@
                         <div class="segmented-highlight"></div>
                     </div>
                 </div>
+
+                <div class="form-group full-width">
+                    <label class="label-premium">Forma de Pagamento</label>
+                    <div class="segmented-control">
+                        <input type="radio" id="pag-debito" name="formaPagamento" value="debito" checked>
+                        <label for="pag-debito">Débito</label>
+                        <input type="radio" id="pag-credito" name="formaPagamento" value="credito">
+                        <label for="pag-credito">Cartão de Crédito</label>
+                        <div class="segmented-highlight"></div>
+                    </div>
+                </div>
+
+                <div id="grupo-cartao-selecao" class="form-group full-width hidden">
+                    <label class="label-premium">Cartão de Crédito</label>
+                    <div style="display: flex; gap: 8px;">
+                        <select id="cartao-id" class="input-premium" style="flex: 1;">
+                            <option value="">Selecione um cartão...</option>
+                        </select>
+                        <button type="button" id="btn-atalho-novo-cartao" class="btn-outline" title="Cadastrar Cartão" style="padding: 0 1rem; border-radius: 8px;">➕</button>
+                    </div>
+                </div>
+
                 <div class="form-group full-width">
                     <label class="label-premium">O que é?</label>
                     <input type="text" id="descricao" class="input-premium" placeholder="Ex: Monitor Ultrawide" required>
@@ -209,6 +260,73 @@
                     <button type="submit" id="btn-submit-lancamento" class="btn-primary w-100">Salvar Lançamento</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Modal de Gerenciar Cartões -->
+    <div id="modal-cartoes" class="modal-overlay hidden" style="z-index: 10004;">
+        <div class="modal-content form-modal shadow-xl" style="max-width: 480px;">
+            <div class="modal-header">
+                <h2>Meus Cartões de Crédito</h2>
+                <button class="btn-close-modal btn-fechar">✖</button>
+            </div>
+            <form id="form-novo-cartao" class="form-grid mt-4">
+                <div class="form-group full-width">
+                    <label class="label-premium">Nome / Apelido do Cartão</label>
+                    <input type="text" id="input-nome-cartao" class="input-premium" placeholder="Ex: Nubank, Itaú, Inter..." required>
+                </div>
+                <div class="form-group">
+                    <label class="label-premium">Dia de Fechamento</label>
+                    <input type="number" id="input-fechamento-cartao" class="input-premium" min="1" max="31" placeholder="Ex: 10">
+                </div>
+                <div class="form-group">
+                    <label class="label-premium">Cor de Identificação</label>
+                    <input type="color" id="input-cor-cartao" class="input-premium" value="#4f46e5" style="padding: 4px; height: 42px;">
+                </div>
+                <div class="form-actions full-width">
+                    <button type="submit" class="btn-primary w-100">Adicionar Cartão</button>
+                </div>
+            </form>
+            <div id="lista-cartoes-container" class="mt-4"></div>
+        </div>
+    </div>
+
+    <!-- Modal de Foto / Perfil -->
+    <div id="modal-perfil" class="modal-overlay hidden" style="z-index: 10004;">
+        <div class="modal-content shadow-xl" style="max-width: 380px;">
+            <div class="modal-header">
+                <h2>Foto do Perfil</h2>
+                <button class="btn-close-modal btn-fechar">✖</button>
+            </div>
+            <form id="form-foto-perfil" class="mt-4" style="text-align: left;">
+                <div class="form-group" style="align-items: center;">
+                    <img id="preview-foto-modal" class="avatar-preview-lg hidden" alt="Foto de perfil">
+                </div>
+                <div class="form-group mt-3">
+                    <label class="label-premium">Escolher Foto no Celular / Computador</label>
+                    <input type="file" id="input-foto-arquivo" class="input-premium" accept="image/*">
+                </div>
+                <div class="form-group mt-3">
+                    <label class="label-premium">Ou Cole o Link (URL) da Foto</label>
+                    <input type="url" id="input-foto-url" class="input-premium" placeholder="https://...">
+                </div>
+                <button type="submit" class="btn-primary w-100 mt-3">Salvar Foto</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal de Instalar Aplicativo no Celular -->
+    <div id="modal-instalar-app" class="modal-overlay hidden" style="z-index: 10006;">
+        <div class="modal-content alert-modal shadow-xl">
+            <div class="modal-icon">📲</div>
+            <h3>Instalar FluxoPróximo</h3>
+            <p id="instrucao-instalacao-texto" class="text-muted mt-2">
+                Adicione o aplicativo na tela inicial do seu celular para abrir mais rápido, em tela cheia e sem zoom.
+            </p>
+            <div class="modal-actions mt-4" style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                <button id="btn-confirmar-instalacao" class="btn-primary">Instalar Agora</button>
+                <button id="btn-fechar-instalacao" class="btn-ghost btn-fechar">Agora Não</button>
+            </div>
         </div>
     </div>
 
