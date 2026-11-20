@@ -432,7 +432,7 @@ document.getElementById('form-foto-perfil').addEventListener('submit', async (e)
     }
 });
 
-// Gerenciamento de Cartões de Crédito
+// Gerenciamento de Cartões de Crédito (no fluxo de lançamento)
 async function carregarCartoesUsuario(selecionarId = null) {
     if (!currentUserId) return;
     const snap = await getDoc(doc(db, "usuarios", currentUserId));
@@ -510,15 +510,13 @@ function renderizarListaCartoes() {
     refreshIcons();
 }
 
-async function abrirModalCartoes() {
+async function abrirModalCartoesDoFluxo() {
     await carregarCartoesUsuario();
     await atualizarDashboardMensal();
     toggleModal('modal-cartoes', 'open');
 }
 
-document.getElementById('btn-abrir-cartoes').addEventListener('click', abrirModalCartoes);
-document.getElementById('dock-btn-cartoes').addEventListener('click', abrirModalCartoes);
-document.getElementById('btn-atalho-novo-cartao').addEventListener('click', abrirModalCartoes);
+document.getElementById('btn-atalho-novo-cartao').addEventListener('click', abrirModalCartoesDoFluxo);
 
 document.getElementById('form-novo-cartao').addEventListener('submit', async (e) => {
     e.preventDefault();

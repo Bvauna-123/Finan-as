@@ -114,17 +114,11 @@
                     </div>
 
                     <div class="topbar-controls">
-                        <button type="button" id="btn-abrir-cartoes" class="btn btn-dark-pill btn-sm" title="Gerenciar Cartões">
-                            <i data-lucide="credit-card"></i>
-                            <span>Cartões</span>
-                        </button>
-                        <button type="button" id="btn-instalar-app-topbar" class="btn btn-dark-pill btn-sm hidden" title="Instalar Aplicativo">
+                        <button type="button" id="btn-instalar-app-topbar" class="btn-icon-dark hidden" title="Instalar Aplicativo" aria-label="Instalar Aplicativo">
                             <i data-lucide="smartphone"></i>
-                            <span>Instalar</span>
                         </button>
-                        <button type="button" id="btn-logout" class="btn btn-dark-pill btn-sm" title="Sair da conta">
+                        <button type="button" id="btn-logout" class="btn-icon-dark" title="Sair da conta" aria-label="Sair da conta">
                             <i data-lucide="log-out"></i>
-                            <span>Sair</span>
                         </button>
                     </div>
                 </header>
@@ -252,15 +246,11 @@
         <nav class="mobile-action-dock" aria-label="Ações rápidas Zedona">
             <button type="button" id="dock-btn-lancamento" class="dock-btn dock-btn-primary">
                 <i data-lucide="plus"></i>
-                <span>Lançar</span>
+                <span>Novo Lançamento</span>
             </button>
             <button type="button" id="dock-btn-simulador" class="dock-btn">
                 <i data-lucide="calculator"></i>
                 <span>Simular</span>
-            </button>
-            <button type="button" id="dock-btn-cartoes" class="dock-btn">
-                <i data-lucide="credit-card"></i>
-                <span>Cartões</span>
             </button>
         </nav>
     </div>
@@ -303,7 +293,7 @@
                         <select id="cartao-id" class="input-premium">
                             <option value="">Selecione um cartão...</option>
                         </select>
-                        <button type="button" id="btn-atalho-novo-cartao" class="btn btn-outline btn-square" title="Cadastrar Cartão">
+                        <button type="button" id="btn-atalho-novo-cartao" class="btn btn-outline btn-square" title="Gerenciar ou Cadastrar Cartão">
                             <i data-lucide="plus"></i>
                         </button>
                     </div>
@@ -364,7 +354,7 @@
         </div>
     </div>
 
-    <!-- Modal de Gerenciar Cartões -->
+    <!-- Modal de Gerenciar Cartões (acessado no fluxo de lançamento no cartão de crédito) -->
     <div id="modal-cartoes" class="modal-overlay hidden" style="z-index: 10004;">
         <div class="modal-content form-modal" style="max-width: 480px;">
             <div class="modal-header">

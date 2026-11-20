@@ -70,6 +70,7 @@ html, body {
     max-width: 100%;
     overflow-x: clip;
     min-height: 100vh;
+    min-height: 100dvh;
     color-scheme: dark;
     position: relative;
 }
@@ -175,13 +176,17 @@ svg.lucide {
     display: block;
 }
 
-/* ─── AUTENTICAÇÃO ─── */
+/* ─── AUTENTICAÇÃO (COM SAFE AREA E RESPIRO NAS QUINAS) ─── */
 .auth-screen {
     min-height: 100vh;
+    min-height: 100dvh;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 1rem;
+    padding-top: max(1.1rem, calc(env(safe-area-inset-top) + 0.65rem));
+    padding-right: max(1.1rem, calc(env(safe-area-inset-right) + 0.35rem));
+    padding-bottom: max(1.65rem, calc(env(safe-area-inset-bottom) + 1rem));
+    padding-left: max(1.1rem, calc(env(safe-area-inset-left) + 0.35rem));
     width: 100%;
 }
 
@@ -217,12 +222,16 @@ svg.lucide {
     margin-top: 2px;
 }
 
-/* ─── SHELL ADAPTATIVO (MOBILE-FIRST) ─── */
+/* ─── SHELL ADAPTATIVO (MOBILE-FIRST + SAFE AREA + RESPIRO INFERIOR) ─── */
 .app-layout {
     display: flex;
     justify-content: center;
     min-height: 100vh;
-    padding: 0.65rem 0.65rem 5.25rem;
+    min-height: 100dvh;
+    padding-top: max(0.85rem, calc(env(safe-area-inset-top) + 0.6rem));
+    padding-right: max(0.8rem, calc(env(safe-area-inset-right) + 0.3rem));
+    padding-bottom: calc(6.5rem + env(safe-area-inset-bottom));
+    padding-left: max(0.8rem, calc(env(safe-area-inset-left) + 0.3rem));
     width: 100%;
 }
 
@@ -247,8 +256,10 @@ svg.lucide {
 
 .topbar {
     display: flex;
-    flex-direction: column;
-    gap: 0.7rem;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.65rem;
 }
 
 .header-titles {
@@ -256,6 +267,7 @@ svg.lucide {
     align-items: center;
     gap: 0.7rem;
     min-width: 0;
+    flex: 1;
 }
 
 .header-titles > div {
@@ -323,10 +335,11 @@ svg.lucide {
 }
 
 .topbar-controls {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(84px, 1fr));
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
     gap: 6px;
-    width: 100%;
+    flex-shrink: 0;
 }
 
 .hero-balance-block {
@@ -504,25 +517,9 @@ svg.lucide {
     font-weight: 700;
 }
 
-.btn-dark-pill {
-    height: 34px;
-    padding: 0 0.65rem;
-    background: rgba(6, 26, 14, 0.14);
-    color: var(--ink-on-green);
-    border: 1px solid rgba(6, 26, 14, 0.16);
-    border-radius: var(--radius-pill);
-    font-size: 0.76rem;
-    font-weight: 700;
-    width: 100%;
-}
-
-.btn-dark-pill:hover {
-    background: rgba(6, 26, 14, 0.24);
-}
-
 .btn-icon-dark {
-    width: 32px;
-    height: 32px;
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
     border: none;
     background: var(--bg-main);
@@ -532,6 +529,12 @@ svg.lucide {
     justify-content: center;
     cursor: pointer;
     flex-shrink: 0;
+    transition: var(--transition);
+}
+
+.btn-icon-dark:hover {
+    background: #141A17;
+    transform: scale(1.03);
 }
 
 .btn-dark-solid { background: var(--bg-main); color: #fff; }
@@ -764,12 +767,12 @@ svg.lucide {
     color: var(--text-muted);
 }
 
-/* ─── DOCK INFERIOR MOBILE ─── */
+/* ─── DOCK INFERIOR MOBILE (COM RESPIRO PARA QUINAS ARREDONDADAS) ─── */
 .mobile-action-dock {
     position: fixed;
-    bottom: 10px;
-    left: 10px;
-    right: 10px;
+    bottom: max(18px, calc(env(safe-area-inset-bottom) + 0.65rem));
+    left: max(16px, calc(env(safe-area-inset-left) + 0.5rem));
+    right: max(16px, calc(env(safe-area-inset-right) + 0.5rem));
     z-index: 950;
     background: rgba(18, 22, 20, 0.94);
     backdrop-filter: blur(14px);
@@ -777,18 +780,18 @@ svg.lucide {
     border-radius: var(--radius-lg);
     padding: 6px;
     display: grid;
-    grid-template-columns: 1.25fr 1fr 1fr;
+    grid-template-columns: 1.4fr 1fr;
     gap: 6px;
     box-shadow: 0 12px 30px rgba(0, 0, 0, 0.7);
 }
 
 .dock-btn {
-    height: 42px;
+    height: 44px;
     border-radius: var(--radius-md);
     border: 1px solid transparent;
     background: var(--bg-dark-elevated);
     color: var(--text-main);
-    font-size: 0.8rem;
+    font-size: 0.82rem;
     font-weight: 700;
     display: inline-flex;
     align-items: center;
@@ -1091,7 +1094,7 @@ select.input-premium {
 .btn-icon:hover { color: var(--brand-green); border-color: var(--brand-green); }
 .btn-icon.danger:hover { color: var(--rose); border-color: var(--rose); }
 
-/* ─── MODAIS / POP-UPS (SEM BARRA DE ROLAGEM E COM BLOQUEIO DE ZOOM) ─── */
+/* ─── MODAIS / POP-UPS (SEM BARRA DE ROLAGEM, COM SAFE AREA E BLOQUEIO DE ZOOM) ─── */
 .modal-overlay {
     position: fixed;
     inset: 0;
@@ -1103,7 +1106,10 @@ select.input-premium {
     z-index: 10000;
     opacity: 1;
     transition: opacity 0.2s ease;
-    padding: 0.75rem;
+    padding-top: max(0.85rem, calc(env(safe-area-inset-top) + 0.5rem));
+    padding-right: max(0.85rem, calc(env(safe-area-inset-right) + 0.35rem));
+    padding-bottom: max(1.2rem, calc(env(safe-area-inset-bottom) + 0.75rem));
+    padding-left: max(0.85rem, calc(env(safe-area-inset-left) + 0.35rem));
     overflow: hidden;
     touch-action: pan-y;
 }
@@ -1120,7 +1126,7 @@ select.input-premium {
     width: 100%;
     border: 1px solid var(--border-dark-strong);
     box-shadow: var(--shadow-dark);
-    max-height: 92vh;
+    max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 2rem);
     overflow-y: auto;
     overflow-x: hidden;
     touch-action: pan-y;
@@ -1247,9 +1253,9 @@ select.input-premium {
 /* Toasts */
 .toast-container {
     position: fixed;
-    bottom: 62px;
-    right: 12px;
-    left: 12px;
+    bottom: calc(82px + env(safe-area-inset-bottom));
+    right: max(16px, calc(env(safe-area-inset-right) + 0.5rem));
+    left: max(16px, calc(env(safe-area-inset-left) + 0.5rem));
     z-index: 10050;
     display: flex;
     flex-direction: column;
@@ -1290,7 +1296,12 @@ select.input-premium {
 
 /* ─── TABLET (>= 640px) ─── */
 @media (min-width: 640px) {
-    .app-layout { padding: 1.1rem 1rem 2rem; }
+    .app-layout {
+        padding-top: max(1.1rem, calc(env(safe-area-inset-top) + 0.5rem));
+        padding-right: max(1.1rem, env(safe-area-inset-right));
+        padding-bottom: max(2.5rem, calc(env(safe-area-inset-bottom) + 1.5rem));
+        padding-left: max(1.1rem, env(safe-area-inset-left));
+    }
     .mobile-action-dock { display: none; }
     .desktop-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .hero-green-panel { padding: 1.25rem; }
@@ -1298,7 +1309,12 @@ select.input-premium {
     .month-navigator { width: auto; }
     .modern-form, .form-grid, .report-grid { grid-template-columns: 1fr 1fr; }
     .modal-content { padding: 1.65rem; }
-    .toast-container { bottom: 20px; left: auto; align-items: flex-end; max-width: 380px; }
+    .toast-container {
+        bottom: max(24px, calc(env(safe-area-inset-bottom) + 1rem));
+        left: auto;
+        align-items: flex-end;
+        max-width: 380px;
+    }
 }
 
 /* ─── DESKTOP COCKPIT (>= 1024px) ─── */
@@ -1312,7 +1328,7 @@ select.input-premium {
 
     .hero-green-panel {
         position: sticky;
-        top: 1rem;
+        top: max(1rem, calc(env(safe-area-inset-top) + 0.5rem));
     }
 
     .workspace-grid {
