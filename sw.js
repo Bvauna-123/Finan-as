@@ -1,4 +1,4 @@
-const CACHE_NAME = 'fluxoproximo-v5';
+const CACHE_NAME = 'fluxoproximo-v6';
 const urlsToCache = [
     './',
     './index.html',
