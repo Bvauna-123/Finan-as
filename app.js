@@ -98,7 +98,7 @@ document.addEventListener('wheel', (e) => {
 let currentUserId = null;
 let cartoesUsuario = [];
 let categoriasUsuario = [];
-let faturasPorCartaoMes = {};
+let todasTransacoesUsuario = [];
 let fotoCadastroBase64 = null;
 let deferredInstallPrompt = null;
 
@@ -403,7 +403,7 @@ onAuthStateChanged(auth, async (user) => {
         currentUserId = null;
         cartoesUsuario = [];
         categoriasUsuario = [];
-        faturasPorCartaoMes = {};
+        todasTransacoesUsuario = [];
         atualizarAvatarHeader("");
         if (meuGrafico) { meuGrafico.destroy(); meuGrafico = null; }
         appLayout.classList.add('hidden');
@@ -461,7 +461,40 @@ document.getElementById('form-foto-perfil').addEventListener('submit', async (e)
     }
 });
 
-// Gerenciamento de Cartões de Crédito (Modo Cartões + Lançamento)
+// Auxiliares de Datas e Faturas Estimadas por Mês
+function adicionarMeses(ym, delta) {
+    if (!ym || !/^\d{4}-\d{2}$/.test(ym)) return ym;
+    const [ano, mes] = ym.split('-').map(Number);
+    const dt = new Date(ano, mes - 1 + delta, 15);
+    return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function formatarMesCurto(ym) {
+    if (!ym || !/^\d{4}-\d{2}$/.test(ym)) return ym;
+    const [ano, mes] = ym.split('-');
+    const nomes = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    return `${nomes[Number(mes) - 1]}/${ano.slice(-2)}`;
+}
+
+function calcularFaturasNoMes(mesReferencia) {
+    const totais = {};
+    if (!mesReferencia) return totais;
+
+    todasTransacoesUsuario.forEach(despesa => {
+        if ((despesa.formaPagamento || 'debito') !== 'credito') return;
+        const ativa = despesa.isFixa
+            ? (mesReferencia >= despesa.mesInicio)
+            : (mesReferencia >= despesa.mesInicio && mesReferencia <= despesa.mesFim);
+
+        if (ativa) {
+            const chave = despesa.cartaoId || 'sem_cartao';
+            totais[chave] = (totais[chave] || 0) + (Number(despesa.valorParcela) || 0);
+        }
+    });
+
+    return totais;
+}
+
 function aplicarCartoesNaTela(selecionarId = null) {
     const select = document.getElementById('cartao-id');
     const valorAlvo = selecionarId || select.value;
@@ -480,28 +513,43 @@ function aplicarCartoesNaTela(selecionarId = null) {
         select.value = valorAlvo;
     }
 
-    renderizarListaCartoes();
+    renderizarVisualizacaoCartoes();
 }
 
-async function carregarCartoesUsuario(selecionarId = null, forcarRede = false) {
-    if (!currentUserId) return;
-    if (!forcarRede && cartoesUsuario.length > 0) {
-        aplicarCartoesNaTela(selecionarId);
-        return;
-    }
-
-    try {
-        const snap = await getDoc(doc(db, "usuarios", currentUserId));
-        cartoesUsuario = snap.exists() && Array.isArray(snap.data().cartoes) ? snap.data().cartoes : [];
-        aplicarCartoesNaTela(selecionarId);
-    } catch (e) {
-        console.error("Erro ao carregar cartões", e);
-        aplicarCartoesNaTela(selecionarId);
-    }
-}
-
-function renderizarListaCartoes() {
+function renderizarVisualizacaoCartoes() {
     const container = document.getElementById('lista-cartoes-container');
+    const resumoBox = document.getElementById('resumo-faturas-mes');
+    const pillsBox = document.getElementById('cartao-mes-pills');
+    const mesInput = document.getElementById('cartao-mes-estimativa');
+
+    if (!mesInput.value) {
+        mesInput.value = document.getElementById('consulta-mes')?.value || new Date().toISOString().substring(0, 7);
+    }
+
+    const mesSelecionado = mesInput.value;
+    const mesBaseDashboard = document.getElementById('consulta-mes')?.value || mesSelecionado;
+
+    // Atalhos rápidos: mês atual do painel e os próximos 3 meses
+    const atalhos = [
+        { ym: mesBaseDashboard, rotulo: `Atual (${formatarMesCurto(mesBaseDashboard)})` },
+        { ym: adicionarMeses(mesBaseDashboard, 1), rotulo: formatarMesCurto(adicionarMeses(mesBaseDashboard, 1)) },
+        { ym: adicionarMeses(mesBaseDashboard, 2), rotulo: formatarMesCurto(adicionarMeses(mesBaseDashboard, 2)) },
+        { ym: adicionarMeses(mesBaseDashboard, 3), rotulo: formatarMesCurto(adicionarMeses(mesBaseDashboard, 3)) }
+    ];
+
+    pillsBox.innerHTML = '';
+    atalhos.forEach(item => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `cartao-mes-pill ${item.ym === mesSelecionado ? 'active' : ''}`;
+        btn.textContent = item.rotulo;
+        btn.addEventListener('click', () => {
+            mesInput.value = item.ym;
+            renderizarVisualizacaoCartoes();
+        });
+        pillsBox.appendChild(btn);
+    });
+
     container.innerHTML = '';
     container.className = 'cartoes-grid-cards';
 
@@ -510,14 +558,21 @@ function renderizarListaCartoes() {
         p.className = 'text-muted text-sm text-center';
         p.textContent = 'Nenhum cartão cadastrado ainda.';
         container.appendChild(p);
+        resumoBox.innerHTML = '';
         return;
     }
 
-    const mesReferencia = document.getElementById('consulta-mes')?.value || '';
+    const faturasMesSelecionado = calcularFaturasNoMes(mesSelecionado);
+    const prox1 = adicionarMeses(mesSelecionado, 1);
+    const prox2 = adicionarMeses(mesSelecionado, 2);
+    const prox3 = adicionarMeses(mesSelecionado, 3);
+    const fatProx1 = calcularFaturasNoMes(prox1);
+    const fatProx2 = calcularFaturasNoMes(prox2);
+    const fatProx3 = calcularFaturasNoMes(prox3);
 
     cartoesUsuario.forEach(c => {
         const corBase = c.cor || '#22E56D';
-        const valorFatura = faturasPorCartaoMes[c.id] || 0;
+        const valorFatura = faturasMesSelecionado[c.id] || 0;
 
         const cardEl = document.createElement('div');
         cardEl.className = 'cartao-visual-card';
@@ -538,24 +593,13 @@ function renderizarListaCartoes() {
 
         brandWrap.appendChild(chip);
         brandWrap.appendChild(nomeStrong);
-
-        const btnRem = document.createElement('button');
-        btnRem.type = 'button';
-        btnRem.className = 'btn-icon danger btn-remover-cartao';
-        btnRem.dataset.id = c.id;
-        btnRem.title = 'Remover cartão';
-        btnRem.innerHTML = '<i data-lucide="trash-2"></i>';
-
         topRow.appendChild(brandWrap);
-        topRow.appendChild(btnRem);
 
         const faturaBox = document.createElement('div');
         faturaBox.className = 'cartao-visual-fatura';
 
         const faturaLabel = document.createElement('span');
-        faturaLabel.textContent = mesReferencia
-            ? `Fatura prevista (${mesReferencia.split('-').reverse().join('/')})`
-            : 'Fatura prevista no vencimento';
+        faturaLabel.textContent = `Estimativa (${formatarMesCurto(mesSelecionado)})`;
 
         const faturaValor = document.createElement('strong');
         faturaValor.textContent = formatadorReal.format(valorFatura);
@@ -575,16 +619,52 @@ function renderizarListaCartoes() {
         metaRow.appendChild(fechaSpan);
         metaRow.appendChild(venceSpan);
 
+        const gridProx = document.createElement('div');
+        gridProx.className = 'cartao-proximos-meses';
+
+        [
+            { label: formatarMesCurto(prox1), val: fatProx1[c.id] || 0 },
+            { label: formatarMesCurto(prox2), val: fatProx2[c.id] || 0 },
+            { label: formatarMesCurto(prox3), val: fatProx3[c.id] || 0 }
+        ].forEach(pItem => {
+            const box = document.createElement('div');
+            box.className = 'cartao-prox-item';
+            const s = document.createElement('span');
+            s.textContent = pItem.label;
+            const st = document.createElement('strong');
+            st.textContent = formatadorReal.format(pItem.val);
+            box.appendChild(s);
+            box.appendChild(st);
+            gridProx.appendChild(box);
+        });
+
         cardEl.appendChild(topRow);
         cardEl.appendChild(faturaBox);
         cardEl.appendChild(metaRow);
+        cardEl.appendChild(gridProx);
         container.appendChild(cardEl);
     });
+
+    const mapaCartoes = Object.fromEntries(cartoesUsuario.map(c => [c.id, c]));
+    const entradasFatura = Object.entries(faturasMesSelecionado);
+    if (!entradasFatura.length) {
+        resumoBox.innerHTML = `<div class="faturas-box-title">Resumo em ${formatarMesCurto(mesSelecionado)}</div><p class="text-muted text-sm">Sem faturas estimadas para este mês.</p>`;
+    } else {
+        const linhasHtml = entradasFatura.map(([cardId, valor]) => {
+            const card = mapaCartoes[cardId];
+            const nomeCard = card ? card.nome : 'Cartão não especificado';
+            const vencTexto = card?.vencimento ? `Vence dia ${card.vencimento}` : 'Sem vencimento definido';
+            return `<div class="fatura-row"><div><strong>${nomeCard}</strong><div class="text-muted text-sm">${vencTexto}</div></div><strong>${formatadorReal.format(valor)}</strong></div>`;
+        }).join('');
+        resumoBox.innerHTML = `<div class="faturas-box-title">Resumo em ${formatarMesCurto(mesSelecionado)}</div>${linhasHtml}`;
+    }
 
     refreshIcons();
 }
 
 async function abrirModalCartoes() {
+    const mesBase = document.getElementById('consulta-mes')?.value || new Date().toISOString().substring(0, 7);
+    document.getElementById('cartao-mes-estimativa').value = mesBase;
     await atualizarDashboardMensal();
     aplicarCartoesNaTela();
     toggleModal('modal-cartoes', 'open');
@@ -592,69 +672,16 @@ async function abrirModalCartoes() {
 
 document.getElementById('btn-abrir-cartoes').addEventListener('click', abrirModalCartoes);
 document.getElementById('dock-btn-cartoes').addEventListener('click', abrirModalCartoes);
-document.getElementById('btn-atalho-novo-cartao').addEventListener('click', abrirModalCartoes);
-
-document.getElementById('form-novo-cartao').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    if (!currentUserId) return;
-
-    const btnSubmit = e.target.querySelector('button[type="submit"]');
-    const nomeInput = document.getElementById('input-nome-cartao');
-    const fechInput = document.getElementById('input-fechamento-cartao');
-    const vencInput = document.getElementById('input-vencimento-cartao');
-    const corInput = document.getElementById('input-cor-cartao');
-
-    const nome = nomeInput.value.trim();
-    const fechamento = parseInt(fechInput.value, 10) || null;
-    const vencimento = parseInt(vencInput.value, 10) || null;
-    const cor = corInput.value || '#22E56D';
-    if (!nome) return;
-
-    const estadoAnterior = [...cartoesUsuario];
-    const novoCartao = { id: 'card_' + Date.now(), nome, fechamento, vencimento, cor };
-    cartoesUsuario = [...cartoesUsuario, novoCartao];
-
-    nomeInput.value = '';
-    fechInput.value = '';
-    vencInput.value = '';
-    corInput.value = '#22e56d';
-
-    aplicarCartoesNaTela(novoCartao.id);
-    showToast("Cartão adicionado.", "success");
-
-    setBotaoCarregando(btnSubmit, true, 'Salvando...');
-    try {
-        await setDoc(doc(db, "usuarios", currentUserId), { cartoes: cartoesUsuario }, { merge: true });
-    } catch {
-        cartoesUsuario = estadoAnterior;
-        aplicarCartoesNaTela();
-        showToast("Falha ao sincronizar cartão.", "error");
-    } finally {
-        setBotaoCarregando(btnSubmit, false);
-    }
+document.getElementById('cartao-mes-estimativa').addEventListener('change', renderizarVisualizacaoCartoes);
+document.getElementById('btn-cartao-mes-prev').addEventListener('click', () => {
+    const el = document.getElementById('cartao-mes-estimativa');
+    el.value = adicionarMeses(el.value, -1);
+    renderizarVisualizacaoCartoes();
 });
-
-document.getElementById('lista-cartoes-container').addEventListener('click', async (e) => {
-    const btn = e.target.closest('.btn-remover-cartao');
-    if (!btn || !currentUserId || btn.disabled) return;
-
-    const idRemover = btn.dataset.id;
-    const estadoAnterior = [...cartoesUsuario];
-
-    cartoesUsuario = cartoesUsuario.filter(c => c.id !== idRemover);
-    aplicarCartoesNaTela();
-    showToast("Cartão removido.", "success");
-
-    btn.disabled = true;
-    try {
-        await setDoc(doc(db, "usuarios", currentUserId), { cartoes: cartoesUsuario }, { merge: true });
-    } catch {
-        cartoesUsuario = estadoAnterior;
-        aplicarCartoesNaTela();
-        showToast("Falha ao remover cartão na nuvem.", "error");
-    } finally {
-        btn.disabled = false;
-    }
+document.getElementById('btn-cartao-mes-next').addEventListener('click', () => {
+    const el = document.getElementById('cartao-mes-estimativa');
+    el.value = adicionarMeses(el.value, 1);
+    renderizarVisualizacaoCartoes();
 });
 
 document.querySelectorAll('input[name="formaPagamento"]').forEach(radio => {
@@ -668,7 +695,7 @@ document.querySelectorAll('input[name="filtroMetodo"]').forEach(radio => {
     radio.addEventListener('change', () => atualizarDashboardMensal());
 });
 
-// Gerenciamento de Categorias (vazio inicialmente, cadastrado e excluído pelo usuário)
+// Gerenciamento de Categorias
 function renderizarListaCategorias() {
     const container = document.getElementById('lista-categorias-container');
     if (!container) return;
@@ -826,7 +853,7 @@ async function abrirModalLancamento() {
     document.getElementById("tipo-parcelada").click();
     document.getElementById("pag-debito").click();
     await carregarCategoriasNoSelect();
-    await carregarCartoesUsuario();
+    aplicarCartoesNaTela();
     toggleModal('modal-form-lancamento', 'open');
 }
 
@@ -862,6 +889,11 @@ async function atualizarDashboardMensal() {
         const q = query(collection(db, "transacoes"), where("userId", "==", currentUserId));
         const querySnapshot = await getDocs(q);
 
+        todasTransacoesUsuario = [];
+        querySnapshot.forEach(documento => {
+            todasTransacoesUsuario.push({ id: documento.id, ...documento.data() });
+        });
+
         let totalDespesasMes = 0;
         let totalDebitoMes = 0;
         let totalCreditoMes = 0;
@@ -873,8 +905,7 @@ async function atualizarDashboardMensal() {
         const dictCores = {};
         let corIndex = 0;
 
-        querySnapshot.forEach((documento) => {
-            const despesa = documento.data();
+        todasTransacoesUsuario.forEach((despesa) => {
             const ehAtivaNoMes = despesa.isFixa ? (mesConsulta >= despesa.mesInicio) : (mesConsulta >= despesa.mesInicio && mesConsulta <= despesa.mesFim);
 
             if (ehAtivaNoMes) {
@@ -954,14 +985,14 @@ async function atualizarDashboardMensal() {
                 const btnEditar = document.createElement("button");
                 btnEditar.type = "button";
                 btnEditar.className = "btn-icon btn-editar";
-                btnEditar.dataset.id = documento.id;
+                btnEditar.dataset.id = despesa.id;
                 btnEditar.title = "Editar";
                 btnEditar.innerHTML = '<i data-lucide="pencil"></i>';
 
                 const btnExcluir = document.createElement("button");
                 btnExcluir.type = "button";
                 btnExcluir.className = "btn-icon danger btn-excluir";
-                btnExcluir.dataset.id = documento.id;
+                btnExcluir.dataset.id = despesa.id;
                 btnExcluir.title = "Excluir";
                 btnExcluir.style.marginLeft = "4px";
                 btnExcluir.innerHTML = '<i data-lucide="trash-2"></i>';
@@ -977,8 +1008,7 @@ async function atualizarDashboardMensal() {
             }
         });
 
-        faturasPorCartaoMes = { ...gastosPorCartao };
-        renderizarListaCartoes();
+        renderizarVisualizacaoCartoes();
         refreshIcons();
 
         const ctx = document.getElementById('categoryChart').getContext('2d');
@@ -1034,20 +1064,6 @@ async function atualizarDashboardMensal() {
         barraEl.style.width = `${larguraBarra}%`;
         barraEl.classList.toggle("over-limit", percentualComprometido > 100);
 
-        const faturasBox = document.getElementById("resumo-faturas-mes");
-        const entradasFatura = Object.entries(gastosPorCartao);
-        if (!entradasFatura.length) {
-            faturasBox.innerHTML = `<div class="faturas-box-title">Faturas do Mês</div><p class="text-muted text-sm">Sem gastos no crédito neste período.</p>`;
-        } else {
-            const linhasHtml = entradasFatura.map(([cardId, valor]) => {
-                const card = mapaCartoes[cardId];
-                const nomeCard = card ? card.nome : 'Cartão não especificado';
-                const vencTexto = card?.vencimento ? `Vence dia ${card.vencimento}` : 'Sem vencimento definido';
-                return `<div class="fatura-row"><div><strong>${nomeCard}</strong><div class="text-muted text-sm">${vencTexto}</div></div><strong>${formatadorReal.format(valor)}</strong></div>`;
-            }).join('');
-            faturasBox.innerHTML = `<div class="faturas-box-title">Faturas do Mês</div>${linhasHtml}`;
-        }
-
     } catch {
         showToast("Erro ao carregar dados.", "error");
     }
@@ -1056,20 +1072,24 @@ async function atualizarDashboardMensal() {
 function mudarMes(delta) {
     const input = document.getElementById('consulta-mes');
     if (!input.value) return;
-    const date = new Date(input.value + '-15');
-    date.setMonth(date.getMonth() + delta);
-    input.value = date.toISOString().substring(0, 7);
+    const novoMes = adicionarMeses(input.value, delta);
+    input.value = novoMes;
+    document.getElementById('cartao-mes-estimativa').value = novoMes;
     atualizarDashboardMensal();
 }
 document.getElementById('btn-prev-month').addEventListener('click', () => mudarMes(-1));
 document.getElementById('btn-next-month').addEventListener('click', () => mudarMes(1));
-document.getElementById("consulta-mes").addEventListener("change", atualizarDashboardMensal);
+document.getElementById("consulta-mes").addEventListener("change", () => {
+    document.getElementById('cartao-mes-estimativa').value = document.getElementById("consulta-mes").value;
+    atualizarDashboardMensal();
+});
 
 async function inicializarApp() {
     if (!currentUserId) return;
     const hoje = new Date();
     const mesAtual = hoje.getFullYear() + "-" + String(hoje.getMonth() + 1).padStart(2, '0');
     if (!document.getElementById("consulta-mes").value) document.getElementById("consulta-mes").value = mesAtual;
+    if (!document.getElementById("cartao-mes-estimativa").value) document.getElementById("cartao-mes-estimativa").value = mesAtual;
 
     try {
         const userSnap = await getDoc(doc(db, "usuarios", currentUserId));
@@ -1248,7 +1268,7 @@ document.getElementById("lista-despesas-corpo").addEventListener("click", async 
                 document.getElementById("mes-inicio").value = data.mesInicio;
 
                 await carregarCategoriasNoSelect(data.categoria);
-                await carregarCartoesUsuario(data.cartaoId || "");
+                aplicarCartoesNaTela(data.cartaoId || "");
 
                 if ((data.formaPagamento || 'debito') === 'credito') {
                     document.getElementById("pag-credito").click();

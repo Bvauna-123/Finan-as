@@ -685,7 +685,7 @@ svg.lucide {
 /* Listas de Categorias e Cartões */
 #lista-categorias-container,
 #lista-cartoes-container {
-    margin-top: 1.25rem;
+    margin-top: 1.15rem;
     padding-top: 0.95rem;
     border-top: 1px solid var(--border-dark);
     display: flex;
@@ -728,6 +728,41 @@ svg.lucide {
     flex-shrink: 0;
 }
 
+/* Seletor de Mês e Atalhos de Próximos Meses nos Cartões */
+.cartao-mes-toolbar {
+    display: flex;
+    flex-direction: column;
+}
+
+.cartao-mes-pills {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.cartao-mes-pill {
+    border: 1px solid var(--border-dark-strong);
+    background: var(--bg-input);
+    color: var(--text-muted);
+    border-radius: var(--radius-pill);
+    padding: 0.34rem 0.7rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.cartao-mes-pill:hover {
+    color: #fff;
+    border-color: var(--brand-green);
+}
+
+.cartao-mes-pill.active {
+    background: var(--brand-green);
+    color: var(--ink-on-green);
+    border-color: var(--brand-green);
+}
+
 /* Cartões Visuais em Modo Cartões */
 .cartoes-grid-cards {
     display: flex;
@@ -740,7 +775,7 @@ svg.lucide {
     border-radius: var(--radius-md);
     padding: 1rem;
     color: #061A0E;
-    background: linear-gradient(135deg, var(--card-color, #22E56D) 0%, rgba(10, 13, 11, 0.84) 170%);
+    background: linear-gradient(135deg, var(--card-color, #22E56D) 0%, rgba(10, 13, 11, 0.86) 175%);
     border: 1px solid rgba(255, 255, 255, 0.2);
     box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
     display: flex;
@@ -767,7 +802,7 @@ svg.lucide {
     width: 28px;
     height: 20px;
     border-radius: 5px;
-    background: rgba(255, 255, 255, 0.38);
+    background: rgba(255, 255, 255, 0.4);
     border: 1px solid rgba(6, 26, 14, 0.28);
     flex-shrink: 0;
 }
@@ -782,7 +817,7 @@ svg.lucide {
 }
 
 .cartao-visual-fatura {
-    background: rgba(10, 13, 11, 0.84);
+    background: rgba(10, 13, 11, 0.86);
     color: #F4F7F5;
     border-radius: var(--radius-sm);
     padding: 0.65rem 0.8rem;
@@ -814,6 +849,41 @@ svg.lucide {
     font-weight: 700;
     color: #061A0E;
     flex-wrap: wrap;
+}
+
+.cartao-proximos-meses {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.cartao-prox-item {
+    background: rgba(10, 13, 11, 0.72);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-sm);
+    padding: 0.45rem 0.55rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.cartao-prox-item span {
+    font-size: 0.66rem;
+    color: var(--text-muted);
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cartao-prox-item strong {
+    font-size: 0.78rem;
+    color: #fff;
+    font-weight: 800;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .faturas-box {
