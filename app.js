@@ -571,14 +571,25 @@ document.querySelectorAll('input[name="filtroMetodo"]').forEach(radio => {
 async function carregarCategoriasNoSelect(selecionarValor = null) {
     if (!currentUserId) return;
     const select = document.getElementById("categoria");
-    const categoriasPadroes = [];
 
     try {
         const userSnap = await getDoc(doc(db, "usuarios", currentUserId));
-        const categoriasSalvas = userSnap.exists() && userSnap.data().categorias ? userSnap.data().categorias : [];
-        const unicas = [...new Set([...categoriasPadroes, ...categoriasSalvas])];
+        const categoriasSalvas = userSnap.exists() && Array.isArray(userSnap.data().categorias)
+            ? userSnap.data().categorias
+            : [];
+        const unicas = [...new Set(categoriasSalvas)];
 
-        select.innerHTML = '<option value="" disabled selected>Selecione...</option>';
+        select.innerHTML = '';
+
+        const placeholderOpt = document.createElement('option');
+        placeholderOpt.value = '';
+        placeholderOpt.disabled = true;
+        placeholderOpt.selected = !selecionarValor;
+        placeholderOpt.textContent = unicas.length
+            ? 'Selecione uma categoria...'
+            : 'Nenhuma categoria cadastrada (use +)';
+        select.appendChild(placeholderOpt);
+
         unicas.forEach(cat => {
             const opt = document.createElement('option');
             opt.value = cat;
@@ -586,8 +597,12 @@ async function carregarCategoriasNoSelect(selecionarValor = null) {
             select.appendChild(opt);
         });
 
-        if (selecionarValor) select.value = selecionarValor;
-    } catch (e) { console.error("Erro ao carregar categorias", e); }
+        if (selecionarValor && unicas.includes(selecionarValor)) {
+            select.value = selecionarValor;
+        }
+    } catch (e) {
+        console.error("Erro ao carregar categorias", e);
+    }
 }
 
 document.getElementById('btn-abrir-nova-cat').addEventListener('click', () => {
