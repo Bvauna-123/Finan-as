@@ -5,6 +5,7 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   sendPasswordResetEmail,
+  updateEmail,
   signOut,
   updateProfile,
   setPersistence,
@@ -96,6 +97,7 @@ document.addEventListener('wheel', (e) => {
 }, { passive: false });
 
 let currentUserId = null;
+let perfilUsuarioCache = { nome: '', email: '', fotoUrl: '' };
 let cartoesUsuario = [];
 let categoriasUsuario = [];
 let transacoesCache = [];
@@ -216,6 +218,20 @@ function atualizarAvatarHeader(fotoUrl) {
         imgEl.src = '';
         imgEl.classList.add('hidden');
         fallbackEl.classList.remove('hidden');
+    }
+}
+
+function atualizarPreviewModalPerfil(fotoUrl) {
+    const prev = document.getElementById('preview-foto-modal');
+    const fallback = document.getElementById('preview-foto-modal-fallback');
+    if (fotoUrl) {
+        prev.src = fotoUrl;
+        prev.classList.remove('hidden');
+        fallback.classList.add('hidden');
+    } else {
+        prev.src = '';
+        prev.classList.add('hidden');
+        fallback.classList.remove('hidden');
     }
 }
 
@@ -345,10 +361,11 @@ document.getElementById('form-auth').addEventListener('submit', async (e) => {
     try {
         if (mode === 'register') {
             const cred = await createUserWithEmailAndPassword(auth, email, senha);
+            const nomeFinal = nome || email.split('@')[0];
             if (nome) await updateProfile(cred.user, { displayName: nome });
 
             await setDoc(doc(db, "usuarios", cred.user.uid), {
-                nome: nome || email.split('@')[0],
+                nome: nomeFinal,
                 email,
                 fotoUrl: fotoCadastroBase64 || "",
                 salarioBase: 0,
@@ -394,7 +411,12 @@ onAuthStateChanged(auth, async (user) => {
 
     if (user) {
         currentUserId = user.uid;
-        subtitulo.textContent = `Olá, ${user.displayName || user.email}`;
+        perfilUsuarioCache = {
+            nome: user.displayName || user.email.split('@')[0],
+            email: user.email || '',
+            fotoUrl: perfilUsuarioCache.fotoUrl || ''
+        };
+        subtitulo.textContent = `Olá, ${perfilUsuarioCache.nome}`;
         authScreen.classList.add('hidden');
         appLayout.classList.remove('hidden');
         detectarTamanhoTela();
@@ -402,6 +424,7 @@ onAuthStateChanged(auth, async (user) => {
         await inicializarApp();
     } else {
         currentUserId = null;
+        perfilUsuarioCache = { nome: '', email: '', fotoUrl: '' };
         cartoesUsuario = [];
         categoriasUsuario = [];
         transacoesCache = [];
@@ -414,26 +437,20 @@ onAuthStateChanged(auth, async (user) => {
     }
 });
 
-// Modal de Foto de Perfil
-document.getElementById('btn-abrir-perfil').addEventListener('click', async () => {
+// ─── SEÇÃO PERFIL (VISUALIZAR E EDITAR DADOS DE CADASTRO + FOTO) ───
+document.getElementById('btn-abrir-perfil').addEventListener('click', () => {
     if (!currentUserId) return;
+    const nomeAtual = perfilUsuarioCache.nome || auth.currentUser?.displayName || '';
+    const emailAtual = perfilUsuarioCache.email || auth.currentUser?.email || '';
+    const fotoAtual = perfilUsuarioCache.fotoUrl || '';
+
+    document.getElementById('input-perfil-nome').value = nomeAtual;
+    document.getElementById('input-perfil-email').value = emailAtual;
+    document.getElementById('input-foto-url').value = fotoAtual.startsWith('http') ? fotoAtual : '';
+    document.getElementById('input-foto-arquivo').value = '';
+    document.getElementById('modal-foto-label').textContent = 'Escolher imagem';
+    atualizarPreviewModalPerfil(fotoAtual);
     toggleModal('modal-perfil', 'open');
-    try {
-        const snap = await getDoc(doc(db, "usuarios", currentUserId));
-        const fotoAtual = snap.exists() ? (snap.data().fotoUrl || "") : "";
-        document.getElementById('input-foto-url').value = fotoAtual.startsWith('http') ? fotoAtual : '';
-        document.getElementById('input-foto-arquivo').value = '';
-        document.getElementById('modal-foto-label').textContent = 'Escolher imagem';
-        const prev = document.getElementById('preview-foto-modal');
-        if (fotoAtual) {
-            prev.src = fotoAtual;
-            prev.classList.remove('hidden');
-        } else {
-            prev.classList.add('hidden');
-        }
-    } catch (err) {
-        console.error(err);
-    }
 });
 
 document.getElementById('input-foto-arquivo').addEventListener('change', async (e) => {
@@ -442,26 +459,63 @@ document.getElementById('input-foto-arquivo').addEventListener('change', async (
     const base64 = await lerImagemComprimida(file);
     document.getElementById('input-foto-url').value = base64;
     document.getElementById('modal-foto-label').textContent = file.name;
-    const prev = document.getElementById('preview-foto-modal');
-    prev.src = base64;
-    prev.classList.remove('hidden');
+    atualizarPreviewModalPerfil(base64);
+});
+
+document.getElementById('input-foto-url').addEventListener('input', (e) => {
+    atualizarPreviewModalPerfil(e.target.value.trim());
 });
 
 document.getElementById('form-foto-perfil').addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!currentUserId) return;
-    const btnSubmit = e.target.querySelector('button[type="submit"]');
-    const fotoFinal = document.getElementById('input-foto-url').value.trim();
 
+    const btnSubmit = document.getElementById('btn-salvar-perfil');
+    const novoNome = document.getElementById('input-perfil-nome').value.trim();
+    const novoEmail = document.getElementById('input-perfil-email').value.trim();
+    const fotoUrlInput = document.getElementById('input-foto-url').value.trim();
+    const fotoFinal = fotoUrlInput || perfilUsuarioCache.fotoUrl || '';
+
+    if (!novoNome || !novoEmail) {
+        showToast("Preencha nome e e-mail.", "error");
+        return;
+    }
+
+    const estadoAnterior = { ...perfilUsuarioCache };
+    perfilUsuarioCache = { nome: novoNome, email: novoEmail, fotoUrl: fotoFinal };
+
+    document.getElementById('usuario-subtitulo').textContent = `Olá, ${novoNome}`;
     atualizarAvatarHeader(fotoFinal);
     toggleModal('modal-perfil', 'close');
-    showToast("Foto de perfil atualizada.", "success");
+    showToast("Perfil atualizado.", "success");
 
     setBotaoCarregando(btnSubmit, true, 'Salvando...');
     try {
-        await setDoc(doc(db, "usuarios", currentUserId), { fotoUrl: fotoFinal }, { merge: true });
+        if (auth.currentUser) {
+            if (auth.currentUser.displayName !== novoNome) {
+                await updateProfile(auth.currentUser, { displayName: novoNome });
+            }
+            if (auth.currentUser.email && auth.currentUser.email !== novoEmail) {
+                try {
+                    await updateEmail(auth.currentUser, novoEmail);
+                } catch (emailErr) {
+                    console.warn("Atualização de e-mail na autenticação:", emailErr);
+                    showToast("Nome e foto salvos. Para alterar o e-mail de login, entre novamente.", "error");
+                }
+            }
+        }
+
+        await setDoc(doc(db, "usuarios", currentUserId), {
+            nome: novoNome,
+            email: novoEmail,
+            fotoUrl: fotoFinal,
+            atualizadoEm: new Date().toISOString()
+        }, { merge: true });
     } catch {
-        showToast("Falha ao sincronizar foto na nuvem.", "error");
+        perfilUsuarioCache = estadoAnterior;
+        document.getElementById('usuario-subtitulo').textContent = `Olá, ${estadoAnterior.nome || estadoAnterior.email}`;
+        atualizarAvatarHeader(estadoAnterior.fotoUrl);
+        showToast("Falha ao sincronizar perfil na nuvem.", "error");
     } finally {
         setBotaoCarregando(btnSubmit, false);
     }
@@ -625,7 +679,35 @@ document.querySelectorAll('input[name="filtroMetodo"]').forEach(radio => {
     radio.addEventListener('change', () => renderizarDashboardCache());
 });
 
-// ─── CATEGORIAS (SEM PADRÕES, COM EXCLUSÃO E RESPOSTA IMEDIATA) ───
+// Alterna entre Despesa e Entrada Extra dentro do modal de lançamento
+function sincronizarNaturezaLancamento() {
+    const natureza = document.querySelector('input[name="naturezaLancamento"]:checked')?.value || 'despesa';
+    const isEntrada = natureza === 'entrada';
+
+    document.getElementById('campos-despesa-bloco').classList.toggle('hidden', isEntrada);
+    document.getElementById('campos-entrada-bloco').classList.toggle('hidden', !isEntrada);
+    document.getElementById('grupo-categoria-lancamento').classList.toggle('hidden', isEntrada);
+
+    document.getElementById('valor-entrada-extra').required = isEntrada;
+    document.getElementById('categoria').required = !isEntrada;
+
+    if (isEntrada) {
+        document.getElementById('valor-total').required = false;
+        document.getElementById('parcelas').required = false;
+        document.getElementById('valor-mensal-fixo').required = false;
+    } else {
+        const isFixa = document.querySelector('input[name="tipoDespesa"]:checked')?.value === 'fixa';
+        document.getElementById('valor-total').required = !isFixa;
+        document.getElementById('parcelas').required = !isFixa;
+        document.getElementById('valor-mensal-fixo').required = isFixa;
+    }
+}
+
+document.querySelectorAll('input[name="naturezaLancamento"]').forEach(radio => {
+    radio.addEventListener('change', sincronizarNaturezaLancamento);
+});
+
+// ─── CATEGORIAS (SEM PADRÕES, COM EXCLUSÃO, ESPAÇAMENTO E RESPOSTA IMEDIATA) ───
 function renderizarListaCategorias() {
     const container = document.getElementById('lista-categorias-container');
     if (!container) return;
@@ -759,8 +841,10 @@ function abrirModalLancamento() {
     document.getElementById("form-despesa").reset();
     document.getElementById("modal-lancamento-titulo").textContent = "Adicionar Lançamento";
     document.querySelector("#btn-submit-lancamento span").textContent = "Salvar Lançamento";
+    document.getElementById("natureza-despesa").click();
     document.getElementById("tipo-parcelada").click();
     document.getElementById("pag-debito").click();
+    sincronizarNaturezaLancamento();
     aplicarCategoriasNaTela("");
     aplicarCartoesNaTela("");
     toggleModal('modal-form-lancamento', 'open');
@@ -787,13 +871,14 @@ function renderizarFaturasDoMes(gastosPorCartao = null) {
     if (!mapaGastos) {
         mapaGastos = {};
         if (mesConsulta) {
-            transacoesCache.forEach(despesa => {
-                const ehAtivaNoMes = despesa.isFixa
-                    ? (mesConsulta >= despesa.mesInicio)
-                    : (mesConsulta >= despesa.mesInicio && mesConsulta <= despesa.mesFim);
-                if (ehAtivaNoMes && (despesa.formaPagamento || 'debito') === 'credito') {
-                    const chave = despesa.cartaoId || 'sem_cartao';
-                    mapaGastos[chave] = (mapaGastos[chave] || 0) + despesa.valorParcela;
+            transacoesCache.forEach(item => {
+                if (item.natureza === 'entrada') return;
+                const ehAtivaNoMes = item.isFixa
+                    ? (mesConsulta >= item.mesInicio)
+                    : (mesConsulta >= item.mesInicio && mesConsulta <= item.mesFim);
+                if (ehAtivaNoMes && (item.formaPagamento || 'debito') === 'credito') {
+                    const chave = item.cartaoId || 'sem_cartao';
+                    mapaGastos[chave] = (mapaGastos[chave] || 0) + item.valorParcela;
                 }
             });
         }
@@ -822,10 +907,12 @@ function renderizarDashboardCache() {
     const emptyState = document.getElementById("empty-state");
     const mapaCartoes = Object.fromEntries(cartoesUsuario.map(c => [c.id, c]));
 
+    let totalEntradasExtrasMes = 0;
     let totalDespesasMes = 0;
     let totalDebitoMes = 0;
     let totalCreditoMes = 0;
-    let countLancamentos = 0;
+    let countDespesas = 0;
+    let countItensTabela = 0;
     let gastosCategoria = {};
     let gastosPorCartao = {};
     tbody.innerHTML = "";
@@ -833,119 +920,204 @@ function renderizarDashboardCache() {
     const dictCores = {};
     let corIndex = 0;
 
-    transacoesCache.forEach((despesa) => {
-        const ehAtivaNoMes = despesa.isFixa
-            ? (mesConsulta >= despesa.mesInicio)
-            : (mesConsulta >= despesa.mesInicio && mesConsulta <= despesa.mesFim);
+    transacoesCache.forEach((item) => {
+        const isEntrada = item.natureza === 'entrada';
+        const ehAtivaNoMes = isEntrada
+            ? (mesConsulta === item.mesInicio)
+            : (item.isFixa
+                ? (mesConsulta >= item.mesInicio)
+                : (mesConsulta >= item.mesInicio && mesConsulta <= item.mesFim));
 
-        if (ehAtivaNoMes) {
-            const metodo = despesa.formaPagamento || 'debito';
-            if (metodo === 'credito') {
-                totalCreditoMes += despesa.valorParcela;
-                const chaveCartao = despesa.cartaoId || 'sem_cartao';
-                gastosPorCartao[chaveCartao] = (gastosPorCartao[chaveCartao] || 0) + despesa.valorParcela;
-            } else {
-                totalDebitoMes += despesa.valorParcela;
+        if (!ehAtivaNoMes) return;
+
+        if (isEntrada) {
+            totalEntradasExtrasMes += item.valorParcela;
+
+            if (filtroMetodo === 'todos' || filtroMetodo === 'debito') {
+                countItensTabela++;
+
+                const tr = document.createElement("tr");
+
+                const tdDesc = document.createElement("td");
+                tdDesc.style.width = "34%";
+                const strongDesc = document.createElement("strong");
+                strongDesc.textContent = item.descricao;
+                strongDesc.style.display = "block";
+                strongDesc.style.overflow = "hidden";
+                strongDesc.style.textOverflow = "ellipsis";
+                strongDesc.style.whiteSpace = "nowrap";
+
+                const divRef = document.createElement("div");
+                divRef.className = "text-emerald text-sm mt-1";
+                divRef.textContent = "Receita extra";
+                tdDesc.appendChild(strongDesc);
+                tdDesc.appendChild(divRef);
+
+                const tdCat = document.createElement("td");
+                tdCat.style.width = "28%";
+                const badge = document.createElement("span");
+                badge.className = "entrada-badge";
+                badge.textContent = "Entrada Extra";
+
+                const divMetodo = document.createElement("div");
+                divMetodo.className = "mt-1";
+                const mBadge = document.createElement("span");
+                mBadge.className = "metodo-badge";
+                mBadge.innerHTML = `<i data-lucide="wallet" style="width:12px;height:12px;"></i>`;
+                const mText = document.createElement("span");
+                mText.textContent = "Caixa";
+                mBadge.appendChild(mText);
+                divMetodo.appendChild(mBadge);
+
+                tdCat.appendChild(badge);
+                tdCat.appendChild(divMetodo);
+
+                const tdValor = document.createElement("td");
+                tdValor.style.width = "22%";
+                tdValor.style.fontWeight = "700";
+                tdValor.style.whiteSpace = "nowrap";
+                tdValor.className = "text-emerald";
+                tdValor.textContent = `+ ${formatadorReal.format(item.valorParcela)}`;
+
+                const tdAcoes = document.createElement("td");
+                tdAcoes.className = "text-right";
+                tdAcoes.style.width = "16%";
+                tdAcoes.style.whiteSpace = "nowrap";
+
+                const btnEditar = document.createElement("button");
+                btnEditar.type = "button";
+                btnEditar.className = "btn-icon btn-editar";
+                btnEditar.dataset.id = item.id;
+                btnEditar.title = "Editar";
+                btnEditar.innerHTML = '<i data-lucide="pencil"></i>';
+
+                const btnExcluir = document.createElement("button");
+                btnExcluir.type = "button";
+                btnExcluir.className = "btn-icon danger btn-excluir";
+                btnExcluir.dataset.id = item.id;
+                btnExcluir.title = "Excluir";
+                btnExcluir.style.marginLeft = "4px";
+                btnExcluir.innerHTML = '<i data-lucide="trash-2"></i>';
+
+                tdAcoes.appendChild(btnEditar);
+                tdAcoes.appendChild(btnExcluir);
+
+                tr.appendChild(tdDesc);
+                tr.appendChild(tdCat);
+                tr.appendChild(tdValor);
+                tr.appendChild(tdAcoes);
+                tbody.appendChild(tr);
             }
-
-            if (filtroMetodo !== 'todos' && metodo !== filtroMetodo) return;
-
-            countLancamentos++;
-            totalDespesasMes += despesa.valorParcela;
-
-            const cat = despesa.categoria || 'Outros';
-            if (gastosCategoria[cat] === undefined) gastosCategoria[cat] = 0;
-            gastosCategoria[cat] += despesa.valorParcela;
-
-            if (!dictCores[cat]) { dictCores[cat] = PALETA_CORES[corIndex % PALETA_CORES.length]; corIndex++; }
-
-            const progresso = despesa.isFixa
-                ? "Fixa"
-                : `${((new Date(mesConsulta + "-15").getFullYear() - new Date(despesa.mesInicio + "-15").getFullYear()) * 12) + (new Date(mesConsulta + "-15").getMonth() - new Date(despesa.mesInicio + "-15").getMonth()) + 1}/${despesa.parcelasTotal}`;
-
-            const cartaoObj = metodo === 'credito' && despesa.cartaoId ? mapaCartoes[despesa.cartaoId] : null;
-            const rotuloMetodo = metodo === 'credito'
-                ? (cartaoObj ? cartaoObj.nome : 'Crédito')
-                : 'Débito';
-
-            const tr = document.createElement("tr");
-
-            const tdDesc = document.createElement("td");
-            tdDesc.style.width = "34%";
-            const strongDesc = document.createElement("strong");
-            strongDesc.textContent = despesa.descricao;
-            strongDesc.style.display = "block";
-            strongDesc.style.overflow = "hidden";
-            strongDesc.style.textOverflow = "ellipsis";
-            strongDesc.style.whiteSpace = "nowrap";
-
-            const divRef = document.createElement("div");
-            divRef.className = "text-muted text-sm mt-1";
-            divRef.textContent = `Ref: ${progresso}`;
-            tdDesc.appendChild(strongDesc);
-            tdDesc.appendChild(divRef);
-
-            const tdCat = document.createElement("td");
-            tdCat.style.width = "28%";
-            const badge = document.createElement("span");
-            badge.className = "dynamic-badge";
-            badge.style.backgroundColor = dictCores[cat];
-            badge.textContent = cat;
-
-            const divMetodo = document.createElement("div");
-            divMetodo.className = "mt-1";
-            const mBadge = document.createElement("span");
-            mBadge.className = "metodo-badge";
-            if (cartaoObj?.cor) mBadge.style.borderColor = cartaoObj.cor;
-            mBadge.innerHTML = metodo === 'credito'
-                ? `<i data-lucide="credit-card" style="width:12px;height:12px;"></i>`
-                : `<i data-lucide="banknote" style="width:12px;height:12px;"></i>`;
-            const mText = document.createElement("span");
-            mText.textContent = rotuloMetodo;
-            mText.style.overflow = "hidden";
-            mText.style.textOverflow = "ellipsis";
-            mText.style.whiteSpace = "nowrap";
-            mBadge.appendChild(mText);
-            divMetodo.appendChild(mBadge);
-
-            tdCat.appendChild(badge);
-            tdCat.appendChild(divMetodo);
-
-            const tdValor = document.createElement("td");
-            tdValor.style.width = "22%";
-            tdValor.style.fontWeight = "700";
-            tdValor.style.whiteSpace = "nowrap";
-            tdValor.textContent = formatadorReal.format(despesa.valorParcela);
-
-            const tdAcoes = document.createElement("td");
-            tdAcoes.className = "text-right";
-            tdAcoes.style.width = "16%";
-            tdAcoes.style.whiteSpace = "nowrap";
-
-            const btnEditar = document.createElement("button");
-            btnEditar.type = "button";
-            btnEditar.className = "btn-icon btn-editar";
-            btnEditar.dataset.id = despesa.id;
-            btnEditar.title = "Editar";
-            btnEditar.innerHTML = '<i data-lucide="pencil"></i>';
-
-            const btnExcluir = document.createElement("button");
-            btnExcluir.type = "button";
-            btnExcluir.className = "btn-icon danger btn-excluir";
-            btnExcluir.dataset.id = despesa.id;
-            btnExcluir.title = "Excluir";
-            btnExcluir.style.marginLeft = "4px";
-            btnExcluir.innerHTML = '<i data-lucide="trash-2"></i>';
-
-            tdAcoes.appendChild(btnEditar);
-            tdAcoes.appendChild(btnExcluir);
-
-            tr.appendChild(tdDesc);
-            tr.appendChild(tdCat);
-            tr.appendChild(tdValor);
-            tr.appendChild(tdAcoes);
-            tbody.appendChild(tr);
+            return;
         }
+
+        const metodo = item.formaPagamento || 'debito';
+        if (metodo === 'credito') {
+            totalCreditoMes += item.valorParcela;
+            const chaveCartao = item.cartaoId || 'sem_cartao';
+            gastosPorCartao[chaveCartao] = (gastosPorCartao[chaveCartao] || 0) + item.valorParcela;
+        } else {
+            totalDebitoMes += item.valorParcela;
+        }
+
+        if (filtroMetodo !== 'todos' && metodo !== filtroMetodo) return;
+
+        countDespesas++;
+        countItensTabela++;
+        totalDespesasMes += item.valorParcela;
+
+        const cat = item.categoria || 'Outros';
+        if (gastosCategoria[cat] === undefined) gastosCategoria[cat] = 0;
+        gastosCategoria[cat] += item.valorParcela;
+
+        if (!dictCores[cat]) { dictCores[cat] = PALETA_CORES[corIndex % PALETA_CORES.length]; corIndex++; }
+
+        const progresso = item.isFixa
+            ? "Fixa"
+            : `${((new Date(mesConsulta + "-15").getFullYear() - new Date(item.mesInicio + "-15").getFullYear()) * 12) + (new Date(mesConsulta + "-15").getMonth() - new Date(item.mesInicio + "-15").getMonth()) + 1}/${item.parcelasTotal}`;
+
+        const cartaoObj = metodo === 'credito' && item.cartaoId ? mapaCartoes[item.cartaoId] : null;
+        const rotuloMetodo = metodo === 'credito'
+            ? (cartaoObj ? cartaoObj.nome : 'Crédito')
+            : 'Débito';
+
+        const tr = document.createElement("tr");
+
+        const tdDesc = document.createElement("td");
+        tdDesc.style.width = "34%";
+        const strongDesc = document.createElement("strong");
+        strongDesc.textContent = item.descricao;
+        strongDesc.style.display = "block";
+        strongDesc.style.overflow = "hidden";
+        strongDesc.style.textOverflow = "ellipsis";
+        strongDesc.style.whiteSpace = "nowrap";
+
+        const divRef = document.createElement("div");
+        divRef.className = "text-muted text-sm mt-1";
+        divRef.textContent = `Ref: ${progresso}`;
+        tdDesc.appendChild(strongDesc);
+        tdDesc.appendChild(divRef);
+
+        const tdCat = document.createElement("td");
+        tdCat.style.width = "28%";
+        const badge = document.createElement("span");
+        badge.className = "dynamic-badge";
+        badge.style.backgroundColor = dictCores[cat];
+        badge.textContent = cat;
+
+        const divMetodo = document.createElement("div");
+        divMetodo.className = "mt-1";
+        const mBadge = document.createElement("span");
+        mBadge.className = "metodo-badge";
+        if (cartaoObj?.cor) mBadge.style.borderColor = cartaoObj.cor;
+        mBadge.innerHTML = metodo === 'credito'
+            ? `<i data-lucide="credit-card" style="width:12px;height:12px;"></i>`
+            : `<i data-lucide="banknote" style="width:12px;height:12px;"></i>`;
+        const mText = document.createElement("span");
+        mText.textContent = rotuloMetodo;
+        mText.style.overflow = "hidden";
+        mText.style.textOverflow = "ellipsis";
+        mText.style.whiteSpace = "nowrap";
+        mBadge.appendChild(mText);
+        divMetodo.appendChild(mBadge);
+
+        tdCat.appendChild(badge);
+        tdCat.appendChild(divMetodo);
+
+        const tdValor = document.createElement("td");
+        tdValor.style.width = "22%";
+        tdValor.style.fontWeight = "700";
+        tdValor.style.whiteSpace = "nowrap";
+        tdValor.textContent = formatadorReal.format(item.valorParcela);
+
+        const tdAcoes = document.createElement("td");
+        tdAcoes.className = "text-right";
+        tdAcoes.style.width = "16%";
+        tdAcoes.style.whiteSpace = "nowrap";
+
+        const btnEditar = document.createElement("button");
+        btnEditar.type = "button";
+        btnEditar.className = "btn-icon btn-editar";
+        btnEditar.dataset.id = item.id;
+        btnEditar.title = "Editar";
+        btnEditar.innerHTML = '<i data-lucide="pencil"></i>';
+
+        const btnExcluir = document.createElement("button");
+        btnExcluir.type = "button";
+        btnExcluir.className = "btn-icon danger btn-excluir";
+        btnExcluir.dataset.id = item.id;
+        btnExcluir.title = "Excluir";
+        btnExcluir.style.marginLeft = "4px";
+        btnExcluir.innerHTML = '<i data-lucide="trash-2"></i>';
+
+        tdAcoes.appendChild(btnEditar);
+        tdAcoes.appendChild(btnExcluir);
+
+        tr.appendChild(tdDesc);
+        tr.appendChild(tdCat);
+        tr.appendChild(tdValor);
+        tr.appendChild(tdAcoes);
+        tbody.appendChild(tr);
     });
 
     refreshIcons();
@@ -953,7 +1125,7 @@ function renderizarDashboardCache() {
     const ctx = document.getElementById('categoryChart').getContext('2d');
     if (meuGrafico) meuGrafico.destroy();
 
-    if (countLancamentos > 0) {
+    if (countDespesas > 0) {
         const labels = Object.keys(gastosCategoria);
         const dataColors = labels.map(label => dictCores[label]);
 
@@ -981,19 +1153,24 @@ function renderizarDashboardCache() {
             }
         });
         document.querySelector('.chart-container').classList.remove('hidden');
+    } else {
+        document.querySelector('.chart-container').classList.add('hidden');
+    }
+
+    if (countItensTabela > 0) {
         emptyState.classList.add('hidden');
         document.querySelector('.modern-table').classList.remove('hidden');
     } else {
-        document.querySelector('.chart-container').classList.add('hidden');
         emptyState.classList.remove('hidden');
         document.querySelector('.modern-table').classList.add('hidden');
     }
 
-    const saldoLivre = rendaBaseCache - totalDespesasMes;
-    const percentualComprometido = rendaBaseCache > 0 ? Math.round((totalDespesasMes / rendaBaseCache) * 100) : 0;
+    const receitaTotalMes = rendaBaseCache + totalEntradasExtrasMes;
+    const saldoLivre = receitaTotalMes - totalDespesasMes;
+    const percentualComprometido = receitaTotalMes > 0 ? Math.round((totalDespesasMes / receitaTotalMes) * 100) : 0;
     const larguraBarra = Math.min(100, Math.max(0, percentualComprometido));
 
-    document.getElementById("dash-renda").textContent = formatadorReal.format(rendaBaseCache);
+    document.getElementById("dash-renda").textContent = formatadorReal.format(receitaTotalMes);
     document.getElementById("dash-despesas").textContent = formatadorReal.format(totalDespesasMes);
     document.getElementById("dash-detalhe-metodos").textContent = `Débito: ${formatadorReal.format(totalDebitoMes)} • Crédito: ${formatadorReal.format(totalCreditoMes)}`;
     document.getElementById("dash-saldo").textContent = formatadorReal.format(saldoLivre);
@@ -1013,7 +1190,15 @@ async function sincronizarDadosFirestore() {
         if (userSnap.exists()) {
             const dados = userSnap.data();
             rendaBaseCache = dados.salarioBase || 0;
-            atualizarAvatarHeader(dados.fotoUrl || "");
+            perfilUsuarioCache = {
+                nome: dados.nome || auth.currentUser?.displayName || auth.currentUser?.email?.split('@')[0] || '',
+                email: dados.email || auth.currentUser?.email || '',
+                fotoUrl: dados.fotoUrl || ''
+            };
+            if (perfilUsuarioCache.nome) {
+                document.getElementById('usuario-subtitulo').textContent = `Olá, ${perfilUsuarioCache.nome}`;
+            }
+            atualizarAvatarHeader(perfilUsuarioCache.fotoUrl);
             cartoesUsuario = Array.isArray(dados.cartoes) ? dados.cartoes : [];
             categoriasUsuario = Array.isArray(dados.categorias) ? [...new Set(dados.categorias)] : [];
 
@@ -1079,6 +1264,7 @@ document.querySelectorAll('input[name="tipoDespesa"]').forEach(radio => {
     radio.addEventListener('change', (e) => {
         const grupoParcelada = document.getElementById('grupo-parcelada');
         const grupoFixa = document.getElementById('grupo-fixa');
+        const isEntrada = document.querySelector('input[name="naturezaLancamento"]:checked')?.value === 'entrada';
 
         if (e.target.value === 'fixa') {
             grupoParcelada.classList.remove('show-smooth');
@@ -1089,7 +1275,7 @@ document.querySelectorAll('input[name="tipoDespesa"]').forEach(radio => {
             }, 180);
             document.getElementById('valor-total').required = false;
             document.getElementById('parcelas').required = false;
-            document.getElementById('valor-mensal-fixo').required = true;
+            document.getElementById('valor-mensal-fixo').required = !isEntrada;
         } else {
             grupoFixa.classList.remove('show-smooth');
             grupoFixa.classList.add('hidden-smooth');
@@ -1097,8 +1283,8 @@ document.querySelectorAll('input[name="tipoDespesa"]').forEach(radio => {
                 grupoParcelada.classList.remove('hidden-smooth');
                 grupoParcelada.classList.add('show-smooth');
             }, 180);
-            document.getElementById('valor-total').required = true;
-            document.getElementById('parcelas').required = true;
+            document.getElementById('valor-total').required = !isEntrada;
+            document.getElementById('parcelas').required = !isEntrada;
             document.getElementById('valor-mensal-fixo').required = false;
         }
     });
@@ -1136,44 +1322,74 @@ document.getElementById("form-despesa").addEventListener("submit", async (e) => 
     if (!currentUserId) return;
 
     const btnSubmit = document.getElementById("btn-submit-lancamento");
+    const natureza = document.querySelector('input[name="naturezaLancamento"]:checked')?.value || 'despesa';
+    const isEntrada = natureza === 'entrada';
     const descricao = document.getElementById("descricao").value.trim();
     const mesInicio = document.getElementById("mes-inicio").value;
-    const categoria = document.getElementById("categoria").value;
-    const isFixa = (document.querySelector('input[name="tipoDespesa"]:checked').value === 'fixa');
-    const formaPagamento = document.querySelector('input[name="formaPagamento"]:checked').value;
-    const cartaoId = formaPagamento === 'credito' ? (document.getElementById("cartao-id").value || null) : null;
 
-    let valorParcela, valorTotal, parcelasTotal, mesFim;
+    let payload;
 
-    if (isFixa) {
-        valorParcela = parseFloat(document.getElementById("valor-mensal-fixo").value);
-        valorTotal = null;
-        parcelasTotal = null;
-        mesFim = null;
+    if (isEntrada) {
+        const valorEntrada = parseFloat(document.getElementById("valor-entrada-extra").value);
+        if (Number.isNaN(valorEntrada) || valorEntrada <= 0) {
+            showToast("Informe um valor válido para a entrada extra.", "error");
+            return;
+        }
+
+        payload = {
+            userId: currentUserId,
+            natureza: 'entrada',
+            descricao,
+            isFixa: false,
+            formaPagamento: 'debito',
+            cartaoId: null,
+            valorTotal: valorEntrada,
+            parcelasTotal: 1,
+            valorParcela: valorEntrada,
+            mesInicio,
+            mesFim: mesInicio,
+            categoria: 'Entrada Extra',
+            atualizadoEm: new Date().toISOString()
+        };
     } else {
-        valorTotal = parseFloat(document.getElementById("valor-total").value);
-        parcelasTotal = parseInt(document.getElementById("parcelas").value, 10);
-        valorParcela = valorTotal / parcelasTotal;
-        const dataInicio = new Date(mesInicio + "-15T00:00:00");
-        const dataFim = new Date(dataInicio);
-        dataFim.setMonth(dataFim.getMonth() + (parcelasTotal - 1));
-        mesFim = dataFim.toISOString().substring(0, 7);
-    }
+        const categoria = document.getElementById("categoria").value;
+        const isFixa = (document.querySelector('input[name="tipoDespesa"]:checked').value === 'fixa');
+        const formaPagamento = document.querySelector('input[name="formaPagamento"]:checked').value;
+        const cartaoId = formaPagamento === 'credito' ? (document.getElementById("cartao-id").value || null) : null;
 
-    const payload = {
-        userId: currentUserId,
-        descricao,
-        isFixa,
-        formaPagamento,
-        cartaoId,
-        valorTotal,
-        parcelasTotal,
-        valorParcela,
-        mesInicio,
-        mesFim,
-        categoria,
-        atualizadoEm: new Date().toISOString()
-    };
+        let valorParcela, valorTotal, parcelasTotal, mesFim;
+
+        if (isFixa) {
+            valorParcela = parseFloat(document.getElementById("valor-mensal-fixo").value);
+            valorTotal = null;
+            parcelasTotal = null;
+            mesFim = null;
+        } else {
+            valorTotal = parseFloat(document.getElementById("valor-total").value);
+            parcelasTotal = parseInt(document.getElementById("parcelas").value, 10);
+            valorParcela = valorTotal / parcelasTotal;
+            const dataInicio = new Date(mesInicio + "-15T00:00:00");
+            const dataFim = new Date(dataInicio);
+            dataFim.setMonth(dataFim.getMonth() + (parcelasTotal - 1));
+            mesFim = dataFim.toISOString().substring(0, 7);
+        }
+
+        payload = {
+            userId: currentUserId,
+            natureza: 'despesa',
+            descricao,
+            isFixa,
+            formaPagamento,
+            cartaoId,
+            valorTotal,
+            parcelasTotal,
+            valorParcela,
+            mesInicio,
+            mesFim,
+            categoria,
+            atualizadoEm: new Date().toISOString()
+        };
+    }
 
     const estadoAnterior = [...transacoesCache];
     const idEditando = idEdicaoAtual;
@@ -1237,22 +1453,30 @@ document.getElementById("lista-despesas-corpo").addEventListener("click", async 
         document.getElementById("descricao").value = data.descricao;
         document.getElementById("mes-inicio").value = data.mesInicio;
 
-        aplicarCategoriasNaTela(data.categoria || "");
-        aplicarCartoesNaTela(data.cartaoId || "");
-
-        if ((data.formaPagamento || 'debito') === 'credito') {
-            document.getElementById("pag-credito").click();
+        if (data.natureza === 'entrada') {
+            document.getElementById("natureza-entrada").click();
+            sincronizarNaturezaLancamento();
+            document.getElementById("valor-entrada-extra").value = data.valorParcela;
         } else {
-            document.getElementById("pag-debito").click();
-        }
+            document.getElementById("natureza-despesa").click();
+            sincronizarNaturezaLancamento();
+            aplicarCategoriasNaTela(data.categoria || "");
+            aplicarCartoesNaTela(data.cartaoId || "");
 
-        if (data.isFixa) {
-            document.getElementById("tipo-fixa").click();
-            document.getElementById("valor-mensal-fixo").value = data.valorParcela;
-        } else {
-            document.getElementById("tipo-parcelada").click();
-            document.getElementById("valor-total").value = data.valorTotal;
-            document.getElementById("parcelas").value = data.parcelasTotal;
+            if ((data.formaPagamento || 'debito') === 'credito') {
+                document.getElementById("pag-credito").click();
+            } else {
+                document.getElementById("pag-debito").click();
+            }
+
+            if (data.isFixa) {
+                document.getElementById("tipo-fixa").click();
+                document.getElementById("valor-mensal-fixo").value = data.valorParcela;
+            } else {
+                document.getElementById("tipo-parcelada").click();
+                document.getElementById("valor-total").value = data.valorTotal;
+                document.getElementById("parcelas").value = data.parcelasTotal;
+            }
         }
 
         document.getElementById("modal-lancamento-titulo").textContent = "Editar Lançamento";
@@ -1283,14 +1507,23 @@ document.getElementById("form-simulador").addEventListener("submit", async (e) =
         dataSimulada.setMonth(dataSimulada.getMonth() + i);
         const mesSimuladoStr = dataSimulada.toISOString().substring(0, 7);
 
+        let entradasExtrasMes = 0;
         let despesasMes = 0;
-        transacoesCache.forEach(despesa => {
-            if (despesa.isFixa ? (mesSimuladoStr >= despesa.mesInicio) : (mesSimuladoStr >= despesa.mesInicio && mesSimuladoStr <= despesa.mesFim)) {
-                despesasMes += despesa.valorParcela;
+
+        transacoesCache.forEach(item => {
+            if (item.natureza === 'entrada') {
+                if (mesSimuladoStr === item.mesInicio) {
+                    entradasExtrasMes += item.valorParcela;
+                }
+                return;
+            }
+            if (item.isFixa ? (mesSimuladoStr >= item.mesInicio) : (mesSimuladoStr >= item.mesInicio && mesSimuladoStr <= item.mesFim)) {
+                despesasMes += item.valorParcela;
             }
         });
 
-        const saldoNoMes = rendaBaseCache - (despesasMes + valorNovaParcela);
+        const receitaMes = rendaBaseCache + entradasExtrasMes;
+        const saldoNoMes = receitaMes - (despesasMes + valorNovaParcela);
         if (saldoNoMes < menorSaldo) {
             menorSaldo = saldoNoMes;
             mesMaisCritico = `${mesSimuladoStr.split('-')[1]}/${mesSimuladoStr.split('-')[0]}`;

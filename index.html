@@ -101,7 +101,7 @@
             <aside class="hero-green-panel animate-fade-in">
                 <header class="topbar">
                     <div class="header-titles">
-                        <button type="button" class="perfil-avatar-wrap" id="btn-abrir-perfil" title="Alterar foto de perfil">
+                        <button type="button" class="perfil-avatar-wrap" id="btn-abrir-perfil" title="Perfil e foto">
                             <img id="header-avatar-img" class="header-avatar hidden" alt="Foto do usuário">
                             <div id="header-avatar-fallback" class="hero-avatar-fallback">
                                 <i data-lucide="user"></i>
@@ -255,7 +255,7 @@
         </nav>
     </div>
 
-    <!-- Modal de Lançamento -->
+    <!-- Modal de Lançamento (Despesa ou Entrada Extra) -->
     <div id="modal-form-lancamento" class="modal-overlay hidden">
         <div class="modal-content form-modal">
             <div class="modal-header">
@@ -266,73 +266,96 @@
             </div>
             <form id="form-despesa" class="modern-form mt-4">
                 <div class="form-group full-width">
-                    <label class="label-premium">Tipo de Lançamento</label>
+                    <label class="label-premium">Natureza do Lançamento</label>
                     <div class="segmented-control">
-                        <input type="radio" id="tipo-parcelada" name="tipoDespesa" value="parcelada" checked>
-                        <label for="tipo-parcelada">Parcelada</label>
-                        <input type="radio" id="tipo-fixa" name="tipoDespesa" value="fixa">
-                        <label for="tipo-fixa">Conta Fixa</label>
+                        <input type="radio" id="natureza-despesa" name="naturezaLancamento" value="despesa" checked>
+                        <label for="natureza-despesa">Despesa</label>
+                        <input type="radio" id="natureza-entrada" name="naturezaLancamento" value="entrada">
+                        <label for="natureza-entrada">Entrada Extra</label>
                         <div class="segmented-highlight"></div>
-                    </div>
-                </div>
-
-                <div class="form-group full-width">
-                    <label class="label-premium">Forma de Pagamento</label>
-                    <div class="segmented-control">
-                        <input type="radio" id="pag-debito" name="formaPagamento" value="debito" checked>
-                        <label for="pag-debito">Débito</label>
-                        <input type="radio" id="pag-credito" name="formaPagamento" value="credito">
-                        <label for="pag-credito">Cartão de Crédito</label>
-                        <div class="segmented-highlight"></div>
-                    </div>
-                </div>
-
-                <div id="grupo-cartao-selecao" class="form-group full-width hidden">
-                    <label class="label-premium" for="cartao-id">Cartão de Crédito</label>
-                    <div class="inline-action-group">
-                        <select id="cartao-id" class="input-premium">
-                            <option value="">Selecione um cartão...</option>
-                        </select>
-                        <button type="button" id="btn-atalho-novo-cartao" class="btn btn-outline btn-square" title="Gerenciar ou Cadastrar Cartão">
-                            <i data-lucide="plus"></i>
-                        </button>
                     </div>
                 </div>
 
                 <div class="form-group full-width">
                     <label class="label-premium" for="descricao">Descrição</label>
-                    <input type="text" id="descricao" class="input-premium" placeholder="Ex: Supermercado, Internet..." required>
+                    <input type="text" id="descricao" class="input-premium" placeholder="Ex: Supermercado, Freela, Extra..." required>
                 </div>
 
-                <div id="dynamic-fields-container" class="full-width dynamic-container">
-                    <div id="grupo-parcelada" class="form-grid">
-                        <div class="form-group">
-                            <label class="label-premium" for="valor-total">Valor Total</label>
-                            <div class="input-icon-group">
-                                <span class="field-prefix">R$</span>
-                                <input type="number" id="valor-total" class="input-premium has-prefix" step="0.01" placeholder="0,00">
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label class="label-premium" for="parcelas">Parcelas</label>
-                            <input type="number" id="parcelas" class="input-premium" min="1" placeholder="1">
+                <!-- Campos exclusivos de Entrada Extra -->
+                <div id="campos-entrada-bloco" class="form-group full-width hidden">
+                    <label class="label-premium" for="valor-entrada-extra">Valor Adicional Recebido</label>
+                    <div class="input-icon-group">
+                        <span class="field-prefix">R$</span>
+                        <input type="number" id="valor-entrada-extra" class="input-premium has-prefix" step="0.01" placeholder="0,00">
+                    </div>
+                </div>
+
+                <!-- Campos exclusivos de Despesa -->
+                <div id="campos-despesa-bloco" class="full-width form-stack">
+                    <div class="form-group">
+                        <label class="label-premium">Tipo de Despesa</label>
+                        <div class="segmented-control">
+                            <input type="radio" id="tipo-parcelada" name="tipoDespesa" value="parcelada" checked>
+                            <label for="tipo-parcelada">Parcelada</label>
+                            <input type="radio" id="tipo-fixa" name="tipoDespesa" value="fixa">
+                            <label for="tipo-fixa">Conta Fixa</label>
+                            <div class="segmented-highlight"></div>
                         </div>
                     </div>
-                    <div id="grupo-fixa" class="form-group hidden-smooth">
-                        <label class="label-premium" for="valor-mensal-fixo">Valor Mensal</label>
-                        <div class="input-icon-group">
-                            <span class="field-prefix">R$</span>
-                            <input type="number" id="valor-mensal-fixo" class="input-premium has-prefix" step="0.01" placeholder="0,00">
+
+                    <div class="form-group">
+                        <label class="label-premium">Forma de Pagamento</label>
+                        <div class="segmented-control">
+                            <input type="radio" id="pag-debito" name="formaPagamento" value="debito" checked>
+                            <label for="pag-debito">Débito</label>
+                            <input type="radio" id="pag-credito" name="formaPagamento" value="credito">
+                            <label for="pag-credito">Cartão de Crédito</label>
+                            <div class="segmented-highlight"></div>
+                        </div>
+                    </div>
+
+                    <div id="grupo-cartao-selecao" class="form-group hidden">
+                        <label class="label-premium" for="cartao-id">Cartão de Crédito</label>
+                        <div class="inline-action-group">
+                            <select id="cartao-id" class="input-premium">
+                                <option value="">Selecione um cartão...</option>
+                            </select>
+                            <button type="button" id="btn-atalho-novo-cartao" class="btn btn-outline btn-square" title="Gerenciar ou Cadastrar Cartão">
+                                <i data-lucide="plus"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="dynamic-fields-container" class="dynamic-container">
+                        <div id="grupo-parcelada" class="form-grid">
+                            <div class="form-group">
+                                <label class="label-premium" for="valor-total">Valor Total</label>
+                                <div class="input-icon-group">
+                                    <span class="field-prefix">R$</span>
+                                    <input type="number" id="valor-total" class="input-premium has-prefix" step="0.01" placeholder="0,00">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="label-premium" for="parcelas">Parcelas</label>
+                                <input type="number" id="parcelas" class="input-premium" min="1" placeholder="1">
+                            </div>
+                        </div>
+                        <div id="grupo-fixa" class="form-group hidden-smooth">
+                            <label class="label-premium" for="valor-mensal-fixo">Valor Mensal</label>
+                            <div class="input-icon-group">
+                                <span class="field-prefix">R$</span>
+                                <input type="number" id="valor-mensal-fixo" class="input-premium has-prefix" step="0.01" placeholder="0,00">
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 <div class="form-group">
-                    <label class="label-premium" for="mes-inicio">Mês de Início</label>
+                    <label class="label-premium" for="mes-inicio">Mês de Referência</label>
                     <input type="month" id="mes-inicio" class="input-premium" required>
                 </div>
 
-                <div class="form-group">
+                <div id="grupo-categoria-lancamento" class="form-group">
                     <label class="label-premium" for="categoria">Categoria</label>
                     <div class="inline-action-group">
                         <select id="categoria" class="input-premium" required>
@@ -354,7 +377,7 @@
         </div>
     </div>
 
-    <!-- Modal de Gerenciar Cartões (acessado no fluxo de lançamento no cartão de crédito) -->
+    <!-- Modal de Gerenciar Cartões -->
     <div id="modal-cartoes" class="modal-overlay hidden" style="z-index: 10004;">
         <div class="modal-content form-modal" style="max-width: 480px;">
             <div class="modal-header">
@@ -392,11 +415,11 @@
         </div>
     </div>
 
-    <!-- Modal de Foto / Perfil -->
+    <!-- Modal de Perfil (Visualizar e Editar Dados de Cadastro + Foto) -->
     <div id="modal-perfil" class="modal-overlay hidden" style="z-index: 10004;">
-        <div class="modal-content" style="max-width: 400px;">
+        <div class="modal-content" style="max-width: 420px;">
             <div class="modal-header">
-                <h2>Foto de Perfil</h2>
+                <h2>Meu Perfil</h2>
                 <button type="button" class="btn-close-modal btn-fechar" aria-label="Fechar">
                     <i data-lucide="x"></i>
                 </button>
@@ -404,22 +427,44 @@
             <form id="form-foto-perfil" class="form-stack mt-4">
                 <div class="form-group" style="align-items: center;">
                     <img id="preview-foto-modal" class="avatar-preview-lg hidden" alt="Foto de perfil">
+                    <div id="preview-foto-modal-fallback" class="perfil-modal-fallback">
+                        <i data-lucide="user"></i>
+                    </div>
                 </div>
+
                 <div class="form-group">
-                    <label class="label-premium">Carregar do dispositivo</label>
+                    <label class="label-premium" for="input-perfil-nome">Nome</label>
+                    <div class="input-icon-group">
+                        <i data-lucide="user" class="field-icon"></i>
+                        <input type="text" id="input-perfil-nome" class="input-premium has-icon" placeholder="Seu nome" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="label-premium" for="input-perfil-email">E-mail</label>
+                    <div class="input-icon-group">
+                        <i data-lucide="mail" class="field-icon"></i>
+                        <input type="email" id="input-perfil-email" class="input-premium has-icon" placeholder="voce@email.com" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="label-premium">Alterar Foto do Dispositivo</label>
                     <label for="input-foto-arquivo" class="file-drop-btn w-100">
                         <i data-lucide="upload"></i>
                         <span id="modal-foto-label">Escolher imagem</span>
                     </label>
                     <input type="file" id="input-foto-arquivo" class="sr-only" accept="image/*">
                 </div>
+
                 <div class="form-group">
-                    <label class="label-premium" for="input-foto-url">Ou link direto (URL)</label>
+                    <label class="label-premium" for="input-foto-url">Ou link direto da foto (URL)</label>
                     <input type="url" id="input-foto-url" class="input-premium" placeholder="https://...">
                 </div>
-                <button type="submit" class="btn btn-emerald w-100 mt-2">
+
+                <button type="submit" id="btn-salvar-perfil" class="btn btn-emerald w-100 mt-2">
                     <i data-lucide="check"></i>
-                    <span>Salvar Foto</span>
+                    <span>Salvar Alterações</span>
                 </button>
             </form>
         </div>
@@ -445,7 +490,7 @@
 
     <!-- Modal Gerenciar Categorias -->
     <div id="modal-nova-categoria" class="modal-overlay hidden" style="z-index: 10005;">
-        <div class="modal-content" style="max-width: 380px;">
+        <div class="modal-content" style="max-width: 390px;">
             <div class="modal-header">
                 <h2>Categorias</h2>
                 <button type="button" class="btn-close-modal btn-fechar" aria-label="Fechar">
@@ -462,7 +507,7 @@
                     <span>Adicionar Categoria</span>
                 </button>
             </form>
-            <div id="lista-categorias-container" class="mt-4"></div>
+            <div id="lista-categorias-container" class="categorias-lista-box mt-4"></div>
         </div>
     </div>
 
