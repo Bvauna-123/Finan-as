@@ -1,63 +1,88 @@
 <!DOCTYPE html>
-<html lang="pt">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>FluxoPróximo | Dashboard Premium</title>
+    <title>FluxoPróximo | Controle Financeiro</title>
 
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#4f46e5">
+    <meta name="theme-color" content="#0A0D0B">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
 
-    <!-- Ecrã de Login / Registo -->
+    <!-- Tela de Login / Cadastro -->
     <div id="auth-screen" class="auth-screen">
-        <div class="card auth-card shadow-xl">
-            <div class="header-titles" style="justify-content: center; margin-bottom: 1rem;">
-                <div class="logo-icon">✨</div>
+        <div class="auth-card">
+            <div class="brand-header">
+                <div class="brand-badge">
+                    <i data-lucide="wallet"></i>
+                </div>
                 <div>
                     <h1 class="page-title">FluxoPróximo</h1>
-                    <p class="page-subtitle">Aceda à sua conta ou crie um registo</p>
+                    <p class="page-subtitle">Acesse sua conta ou crie um cadastro</p>
                 </div>
             </div>
 
-            <div class="segmented-control" style="margin-bottom: 1rem;">
+            <div class="segmented-control mb-4">
                 <input type="radio" id="auth-mode-login" name="authMode" value="login" checked>
                 <label for="auth-mode-login">Entrar</label>
                 <input type="radio" id="auth-mode-register" name="authMode" value="register">
-                <label for="auth-mode-register">Registar</label>
+                <label for="auth-mode-register">Cadastrar</label>
                 <div class="segmented-highlight"></div>
             </div>
 
-            <form id="form-auth" class="form-grid" style="grid-template-columns: 1fr;">
+            <form id="form-auth" class="form-stack">
                 <div id="grupo-nome-cadastro" class="form-group hidden">
-                    <label class="label-premium">O Seu Nome</label>
-                    <input type="text" id="auth-nome" class="input-premium" placeholder="Ex: Bruno">
+                    <label class="label-premium" for="auth-nome">Seu Nome</label>
+                    <div class="input-icon-group">
+                        <i data-lucide="user" class="field-icon"></i>
+                        <input type="text" id="auth-nome" class="input-premium has-icon" placeholder="Ex: Bruno">
+                    </div>
                 </div>
+
                 <div id="grupo-foto-cadastro" class="form-group hidden">
                     <label class="label-premium">Foto de Perfil (Opcional)</label>
                     <div class="avatar-upload-row">
                         <img id="preview-foto-cadastro" class="avatar-preview hidden" alt="Pré-visualização da foto">
-                        <input type="file" id="auth-foto-file" class="input-premium" accept="image/*">
+                        <label for="auth-foto-file" class="file-drop-btn">
+                            <i data-lucide="upload"></i>
+                            <span id="auth-foto-label">Selecionar imagem</span>
+                        </label>
+                        <input type="file" id="auth-foto-file" class="sr-only" accept="image/*">
                     </div>
                 </div>
+
                 <div class="form-group">
-                    <label class="label-premium">E-mail</label>
-                    <input type="email" id="auth-email" class="input-premium" placeholder="voce@email.com" required>
+                    <label class="label-premium" for="auth-email">E-mail</label>
+                    <div class="input-icon-group">
+                        <i data-lucide="mail" class="field-icon"></i>
+                        <input type="email" id="auth-email" class="input-premium has-icon" placeholder="voce@email.com" required>
+                    </div>
                 </div>
+
                 <div class="form-group">
-                    <label class="label-premium">Palavra-passe</label>
-                    <input type="password" id="auth-senha" class="input-premium" placeholder="Mínimo 6 caracteres" minlength="6" required>
+                    <label class="label-premium" for="auth-senha">Senha</label>
+                    <div class="input-icon-group">
+                        <i data-lucide="lock" class="field-icon"></i>
+                        <input type="password" id="auth-senha" class="input-premium has-icon" placeholder="Mínimo 6 caracteres" minlength="6" required>
+                    </div>
                 </div>
-                <button type="submit" id="btn-auth-submit" class="btn-primary w-100 mt-2">Entrar</button>
-                <button type="button" id="btn-esqueci-senha" class="btn-ghost btn-sm w-100 mt-1">Esqueci a palavra-passe</button>
+
+                <button type="submit" id="btn-auth-submit" class="btn btn-emerald w-100 mt-2">
+                    <i data-lucide="log-in"></i>
+                    <span>Entrar na Conta</span>
+                </button>
+                <button type="button" id="btn-esqueci-senha" class="btn btn-ghost btn-sm w-100">
+                    Recuperar senha por e-mail
+                </button>
             </form>
         </div>
     </div>
@@ -66,49 +91,89 @@
     <div class="app-layout hidden">
         <main class="main-content">
 
-            <header class="topbar animate-fade-in">
-                <div class="header-titles">
-                    <div class="perfil-avatar-wrap" id="btn-abrir-perfil" title="Alterar foto de perfil">
-                        <img id="header-avatar-img" class="header-avatar hidden" alt="Foto do utilizador">
-                        <div id="header-avatar-fallback" class="logo-icon">✨</div>
+            <!-- Hero Verde em Destaque (inspirado no painel principal da referência) -->
+            <section class="hero-green-panel animate-fade-in">
+                <header class="topbar">
+                    <div class="header-titles">
+                        <button type="button" class="perfil-avatar-wrap" id="btn-abrir-perfil" title="Alterar foto de perfil">
+                            <img id="header-avatar-img" class="header-avatar hidden" alt="Foto do usuário">
+                            <div id="header-avatar-fallback" class="hero-avatar-fallback">
+                                <i data-lucide="user"></i>
+                            </div>
+                            <span class="avatar-edit-dot"><i data-lucide="camera"></i></span>
+                        </button>
+                        <div>
+                            <span class="hero-kicker">FluxoPróximo</span>
+                            <p class="hero-greeting" id="usuario-subtitulo">Olá</p>
+                        </div>
                     </div>
-                    <div>
-                        <h1 class="page-title">FluxoPróximo</h1>
-                        <p class="page-subtitle" id="usuario-subtitulo">O seu controlo financeiro inteligente</p>
-                    </div>
-                </div>
 
-                <div class="topbar-controls">
-                    <div class="renda-widget shadow-hover" id="renda-widget-container">
+                    <div class="topbar-controls">
+                        <button type="button" id="btn-abrir-cartoes" class="btn btn-dark-pill btn-sm" title="Gerenciar Cartões">
+                            <i data-lucide="credit-card"></i>
+                            <span>Cartões</span>
+                        </button>
+                        <button type="button" id="btn-instalar-app-topbar" class="btn btn-dark-pill btn-sm hidden" title="Instalar Aplicativo">
+                            <i data-lucide="smartphone"></i>
+                            <span>Instalar</span>
+                        </button>
+                        <button type="button" id="btn-logout" class="btn btn-dark-pill btn-sm" title="Sair da conta">
+                            <i data-lucide="log-out"></i>
+                            <span>Sair</span>
+                        </button>
+                    </div>
+                </header>
+
+                <div class="hero-balance-row mt-4">
+                    <div>
+                        <span class="hero-balance-label">Saldo Livre no Mês</span>
+                        <h1 id="dash-saldo" class="hero-balance-value">R$ 0,00</h1>
+                        <div class="hero-sub-pills mt-2">
+                            <span class="hero-pill">Receita: <strong id="dash-renda">R$ 0,00</strong></span>
+                            <span class="hero-pill">Despesas: <strong id="dash-despesas">R$ 0,00</strong></span>
+                        </div>
+                        <p class="hero-method-caption mt-2" id="dash-detalhe-metodos">Débito: R$ 0,00 • Crédito: R$ 0,00</p>
+                    </div>
+
+                    <div class="renda-widget" id="renda-widget-container">
                         <div id="renda-view" class="renda-view hidden">
-                            <span class="renda-label">Renda Base</span>
-                            <strong id="renda-valor-display">R$ 0,00</strong>
-                            <button id="btn-editar-renda" class="btn-icon" title="Editar">✏️</button>
+                            <div>
+                                <span class="renda-label">Renda Base</span>
+                                <strong id="renda-valor-display">R$ 0,00</strong>
+                            </div>
+                            <button type="button" id="btn-editar-renda" class="btn-icon-dark" title="Editar renda">
+                                <i data-lucide="pencil"></i>
+                            </button>
                         </div>
                         <form id="form-usuario" class="renda-form hidden">
-                            <div class="input-with-icon">
-                                <span class="icon">R$</span>
-                                <input type="number" id="salario" class="input-premium" step="0.01" placeholder="3500.00" required>
+                            <div class="input-icon-group compact">
+                                <span class="field-prefix dark-prefix">R$</span>
+                                <input type="number" id="salario" class="input-dark-inline has-prefix" step="0.01" placeholder="3500.00" required>
                             </div>
-                            <button type="submit" class="btn-primary btn-sm">Guardar</button>
-                            <button type="button" id="btn-cancelar-renda" class="btn-ghost btn-sm hidden">Cancelar</button>
+                            <button type="submit" class="btn btn-dark-solid btn-sm">Salvar</button>
+                            <button type="button" id="btn-cancelar-renda" class="btn btn-ghost-dark btn-sm hidden">Cancelar</button>
                         </form>
                     </div>
-                    <button id="btn-abrir-cartoes" class="btn-outline btn-sm" title="Gerir Cartões">💳 Cartões</button>
-                    <button id="btn-instalar-app-topbar" class="btn-outline btn-sm hidden" title="Instalar Aplicação">📲 Instalar</button>
-                    <button id="btn-logout" class="btn-outline btn-sm" title="Sair da conta">Sair</button>
                 </div>
-            </header>
 
-            <div class="action-bar animate-fade-in delay-1">
-                <button id="btn-abrir-lancamento" class="btn-primary shadow-hover"><span class="icon-text">➕</span> Novo Lançamento</button>
-                <button id="btn-abrir-simulador" class="btn-dark shadow-hover"><span class="icon-text">🔮</span> Simular Compra</button>
-            </div>
+                <!-- Barra de Ações Rápidas (estilo Deposit / Withdraw) -->
+                <div class="action-bar mt-4">
+                    <button type="button" id="btn-abrir-lancamento" class="btn btn-dark-action">
+                        <i data-lucide="plus"></i>
+                        <span>Novo Lançamento</span>
+                    </button>
+                    <button type="button" id="btn-abrir-simulador" class="btn btn-dark-action">
+                        <i data-lucide="calculator"></i>
+                        <span>Simular Compra</span>
+                    </button>
+                </div>
+            </section>
 
-            <section class="card projection-card animate-fade-in delay-2 shadow-hover mt-4">
-                <div class="card-header border-none" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
-                    <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-                        <h2>Visão Mensal</h2>
+            <!-- Seção de Visão Mensal, Gráfico e Lançamentos -->
+            <section id="dashboard-mensal" class="dashboard-section animate-fade-in delay-1">
+                <div class="card-header-bar">
+                    <div class="filter-group-wrap">
+                        <h2>Atividade Mensal</h2>
                         <div class="segmented-control metodo-filtro-control">
                             <input type="radio" id="filtro-todos" name="filtroMetodo" value="todos" checked>
                             <label for="filtro-todos">Todos</label>
@@ -118,64 +183,45 @@
                             <label for="filtro-credito">Crédito</label>
                         </div>
                     </div>
+
                     <div class="month-navigator">
-                        <button id="btn-prev-month" class="nav-arrow" title="Mês Anterior">❮</button>
-                        <input type="month" id="consulta-mes" class="pill-input premium-select">
-                        <button id="btn-next-month" class="nav-arrow" title="Próximo Mês">❯</button>
+                        <button type="button" id="btn-prev-month" class="nav-arrow" title="Mês Anterior">
+                            <i data-lucide="chevron-left"></i>
+                        </button>
+                        <input type="month" id="consulta-mes" class="premium-select">
+                        <button type="button" id="btn-next-month" class="nav-arrow" title="Próximo Mês">
+                            <i data-lucide="chevron-right"></i>
+                        </button>
                     </div>
                 </div>
 
-                <div id="dashboard-mensal" class="dashboard hidden-smooth mt-2">
-                    <div class="metrics-grid">
-                        <div class="metric-box bg-slate">
-                            <div class="metric-icon-wrap text-emerald">📈</div>
-                            <div>
-                                <span>Receita Projetada</span>
-                                <h3 id="dash-renda">R$ 0,00</h3>
-                            </div>
+                <div class="dashboard-content-grid mt-3">
+                    <div class="chart-container card-dark hidden">
+                        <div class="card-dark-head">
+                            <i data-lucide="pie-chart" class="accent-green"></i>
+                            <h3 class="chart-title">Gastos por Categoria</h3>
                         </div>
-                        <div class="metric-box bg-slate">
-                            <div class="metric-icon-wrap text-rose">📉</div>
-                            <div>
-                                <span>Total em Despesas</span>
-                                <h3 id="dash-despesas">R$ 0,00</h3>
-                                <small class="text-muted text-sm" id="dash-detalhe-metodos">Débito: R$ 0,00 • Crédito: R$ 0,00</small>
-                            </div>
-                        </div>
-                        <div class="metric-box balance-box shadow-lg" id="card-saldo">
-                            <div class="metric-icon-wrap text-white">💰</div>
-                            <div>
-                                <span>Saldo Livre</span>
-                                <h3 id="dash-saldo">R$ 0,00</h3>
-                            </div>
+                        <div class="chart-canvas-wrap">
+                            <canvas id="categoryChart"></canvas>
                         </div>
                     </div>
 
-                    <div class="dashboard-content-grid mt-4">
-                        <div class="chart-container card-outline hidden">
-                            <h3 class="chart-title">Distribuição de Gastos</h3>
-                            <div style="position: relative; height: 250px; width: 100%; display: flex; justify-content: center;">
-                                <canvas id="categoryChart"></canvas>
-                            </div>
-                        </div>
-
-                        <div class="table-container card-outline">
-                            <table class="modern-table">
-                                <thead>
-                                    <tr>
-                                        <th>Descrição</th>
-                                        <th>Categoria / Pagamento</th>
-                                        <th>Valor</th>
-                                        <th class="text-right">Ações</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="lista-despesas-corpo"></tbody>
-                            </table>
-                            <div id="empty-state" class="empty-state hidden">
-                                <div class="empty-icon">🍃</div>
-                                <h4>Tudo Limpo!</h4>
-                                <p>O seu fluxo de caixa está livre neste mês.</p>
-                            </div>
+                    <div class="table-container card-dark">
+                        <table class="modern-table">
+                            <thead>
+                                <tr>
+                                    <th>Descrição</th>
+                                    <th>Categoria / Pagamento</th>
+                                    <th>Valor</th>
+                                    <th class="text-right">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="lista-despesas-corpo"></tbody>
+                        </table>
+                        <div id="empty-state" class="empty-state hidden">
+                            <div class="empty-icon"><i data-lucide="inbox"></i></div>
+                            <h4>Nenhum lançamento neste mês</h4>
+                            <p>Seu fluxo de caixa está livre para o período selecionado.</p>
                         </div>
                     </div>
                 </div>
@@ -185,10 +231,15 @@
 
     <!-- Modal de Lançamento -->
     <div id="modal-form-lancamento" class="modal-overlay hidden">
-        <div class="modal-content form-modal shadow-xl">
+        <div class="modal-content form-modal">
             <div class="modal-header">
-                <h2 id="modal-lancamento-titulo">Adicionar Lançamento</h2>
-                <button class="btn-close-modal btn-fechar">✖</button>
+                <div class="modal-title-group">
+                    <i data-lucide="receipt" class="modal-header-icon"></i>
+                    <h2 id="modal-lancamento-titulo">Adicionar Lançamento</h2>
+                </div>
+                <button type="button" class="btn-close-modal btn-fechar" aria-label="Fechar">
+                    <i data-lucide="x"></i>
+                </button>
             </div>
             <form id="form-despesa" class="modern-form mt-4">
                 <div class="form-group full-width">
@@ -214,77 +265,102 @@
                 </div>
 
                 <div id="grupo-cartao-selecao" class="form-group full-width hidden">
-                    <label class="label-premium">Cartão de Crédito</label>
-                    <div style="display: flex; gap: 8px;">
-                        <select id="cartao-id" class="input-premium" style="flex: 1;">
+                    <label class="label-premium" for="cartao-id">Cartão de Crédito</label>
+                    <div class="inline-action-group">
+                        <select id="cartao-id" class="input-premium">
                             <option value="">Selecione um cartão...</option>
                         </select>
-                        <button type="button" id="btn-atalho-novo-cartao" class="btn-outline" title="Cadastrar Cartão" style="padding: 0 1rem; border-radius: 8px;">➕</button>
+                        <button type="button" id="btn-atalho-novo-cartao" class="btn btn-outline btn-square" title="Cadastrar Cartão">
+                            <i data-lucide="plus"></i>
+                        </button>
                     </div>
                 </div>
 
                 <div class="form-group full-width">
-                    <label class="label-premium">O que é?</label>
-                    <input type="text" id="descricao" class="input-premium" placeholder="Ex: Monitor Ultrawide" required>
+                    <label class="label-premium" for="descricao">Descrição</label>
+                    <input type="text" id="descricao" class="input-premium" placeholder="Ex: Supermercado, Internet..." required>
                 </div>
+
                 <div id="dynamic-fields-container" class="full-width dynamic-container">
                     <div id="grupo-parcelada" class="form-grid">
                         <div class="form-group">
-                            <label class="label-premium">Valor Total</label>
-                            <div class="input-with-icon"><span class="icon">R$</span><input type="number" id="valor-total" class="input-premium" step="0.01"></div>
+                            <label class="label-premium" for="valor-total">Valor Total</label>
+                            <div class="input-icon-group">
+                                <span class="field-prefix">R$</span>
+                                <input type="number" id="valor-total" class="input-premium has-prefix" step="0.01" placeholder="0,00">
+                            </div>
                         </div>
                         <div class="form-group">
-                            <label class="label-premium">Qtd. Parcelas</label>
-                            <input type="number" id="parcelas" class="input-premium" min="1">
+                            <label class="label-premium" for="parcelas">Parcelas</label>
+                            <input type="number" id="parcelas" class="input-premium" min="1" placeholder="1">
                         </div>
                     </div>
                     <div id="grupo-fixa" class="form-group hidden-smooth">
-                        <label class="label-premium">Valor Mensal</label>
-                        <div class="input-with-icon"><span class="icon">R$</span><input type="number" id="valor-mensal-fixo" class="input-premium" step="0.01"></div>
+                        <label class="label-premium" for="valor-mensal-fixo">Valor Mensal</label>
+                        <div class="input-icon-group">
+                            <span class="field-prefix">R$</span>
+                            <input type="number" id="valor-mensal-fixo" class="input-premium has-prefix" step="0.01" placeholder="0,00">
+                        </div>
                     </div>
                 </div>
+
                 <div class="form-group">
-                    <label class="label-premium">Mês de Início</label>
+                    <label class="label-premium" for="mes-inicio">Mês de Início</label>
                     <input type="month" id="mes-inicio" class="input-premium" required>
                 </div>
+
                 <div class="form-group">
-                    <label class="label-premium">Categoria</label>
-                    <div style="display: flex; gap: 8px;">
-                        <select id="categoria" class="input-premium" required style="flex: 1;">
+                    <label class="label-premium" for="categoria">Categoria</label>
+                    <div class="inline-action-group">
+                        <select id="categoria" class="input-premium" required>
                             <option value="" disabled selected>Selecione...</option>
                         </select>
-                        <button type="button" id="btn-abrir-nova-cat" class="btn-outline" title="Criar Nova Categoria" style="padding: 0 1rem; border-radius: 8px;">➕</button>
+                        <button type="button" id="btn-abrir-nova-cat" class="btn btn-outline btn-square" title="Nova Categoria">
+                            <i data-lucide="plus"></i>
+                        </button>
                     </div>
                 </div>
-                <div class="form-actions full-width mt-3">
-                    <button type="submit" id="btn-submit-lancamento" class="btn-primary w-100">Guardar Lançamento</button>
+
+                <div class="form-actions full-width mt-2">
+                    <button type="submit" id="btn-submit-lancamento" class="btn btn-emerald w-100">
+                        <i data-lucide="check"></i>
+                        <span>Salvar Lançamento</span>
+                    </button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Modal de Gerir Cartões -->
+    <!-- Modal de Gerenciar Cartões -->
     <div id="modal-cartoes" class="modal-overlay hidden" style="z-index: 10004;">
-        <div class="modal-content form-modal shadow-xl" style="max-width: 480px;">
+        <div class="modal-content form-modal" style="max-width: 480px;">
             <div class="modal-header">
-                <h2>Os Meus Cartões de Crédito</h2>
-                <button class="btn-close-modal btn-fechar">✖</button>
+                <div class="modal-title-group">
+                    <i data-lucide="credit-card" class="modal-header-icon"></i>
+                    <h2>Cartões de Crédito</h2>
+                </div>
+                <button type="button" class="btn-close-modal btn-fechar" aria-label="Fechar">
+                    <i data-lucide="x"></i>
+                </button>
             </div>
             <form id="form-novo-cartao" class="form-grid mt-4">
                 <div class="form-group full-width">
-                    <label class="label-premium">Nome / Designação do Cartão</label>
+                    <label class="label-premium" for="input-nome-cartao">Nome do Cartão</label>
                     <input type="text" id="input-nome-cartao" class="input-premium" placeholder="Ex: Nubank, Itaú, Inter..." required>
                 </div>
                 <div class="form-group">
-                    <label class="label-premium">Dia de Fechamento</label>
+                    <label class="label-premium" for="input-fechamento-cartao">Dia de Fechamento</label>
                     <input type="number" id="input-fechamento-cartao" class="input-premium" min="1" max="31" placeholder="Ex: 10">
                 </div>
                 <div class="form-group">
-                    <label class="label-premium">Cor de Identificação</label>
-                    <input type="color" id="input-cor-cartao" class="input-premium" value="#4f46e5" style="padding: 4px; height: 42px;">
+                    <label class="label-premium" for="input-cor-cartao">Cor de Identificação</label>
+                    <input type="color" id="input-cor-cartao" class="input-color-premium" value="#22c55e">
                 </div>
                 <div class="form-actions full-width">
-                    <button type="submit" class="btn-primary w-100">Adicionar Cartão</button>
+                    <button type="submit" class="btn btn-emerald w-100">
+                        <i data-lucide="plus"></i>
+                        <span>Adicionar Cartão</span>
+                    </button>
                 </div>
             </form>
             <div id="lista-cartoes-container" class="mt-4"></div>
@@ -293,98 +369,138 @@
 
     <!-- Modal de Foto / Perfil -->
     <div id="modal-perfil" class="modal-overlay hidden" style="z-index: 10004;">
-        <div class="modal-content shadow-xl" style="max-width: 380px;">
+        <div class="modal-content" style="max-width: 400px;">
             <div class="modal-header">
-                <h2>Foto de Perfil</h2>
-                <button class="btn-close-modal btn-fechar">✖</button>
+                <div class="modal-title-group">
+                    <i data-lucide="user-circle" class="modal-header-icon"></i>
+                    <h2>Foto de Perfil</h2>
+                </div>
+                <button type="button" class="btn-close-modal btn-fechar" aria-label="Fechar">
+                    <i data-lucide="x"></i>
+                </button>
             </div>
-            <form id="form-foto-perfil" class="mt-4" style="text-align: left;">
+            <form id="form-foto-perfil" class="form-stack mt-4">
                 <div class="form-group" style="align-items: center;">
                     <img id="preview-foto-modal" class="avatar-preview-lg hidden" alt="Foto de perfil">
                 </div>
-                <div class="form-group mt-3">
-                    <label class="label-premium">Escolher Foto no Telemóvel / Computador</label>
-                    <input type="file" id="input-foto-arquivo" class="input-premium" accept="image/*">
+                <div class="form-group">
+                    <label class="label-premium">Carregar do dispositivo</label>
+                    <label for="input-foto-arquivo" class="file-drop-btn w-100">
+                        <i data-lucide="upload"></i>
+                        <span id="modal-foto-label">Escolher imagem</span>
+                    </label>
+                    <input type="file" id="input-foto-arquivo" class="sr-only" accept="image/*">
                 </div>
-                <div class="form-group mt-3">
-                    <label class="label-premium">Ou Cole o Link (URL) da Foto</label>
+                <div class="form-group">
+                    <label class="label-premium" for="input-foto-url">Ou link direto (URL)</label>
                     <input type="url" id="input-foto-url" class="input-premium" placeholder="https://...">
                 </div>
-                <button type="submit" class="btn-primary w-100 mt-3">Guardar Foto</button>
+                <button type="submit" class="btn btn-emerald w-100 mt-2">
+                    <i data-lucide="check"></i>
+                    <span>Salvar Foto</span>
+                </button>
             </form>
         </div>
     </div>
 
-    <!-- Modal de Instalar Aplicativo no Telemóvel -->
+    <!-- Modal de Instalar Aplicativo no Celular -->
     <div id="modal-instalar-app" class="modal-overlay hidden" style="z-index: 10006;">
-        <div class="modal-content alert-modal shadow-xl">
-            <div class="modal-icon">📲</div>
+        <div class="modal-content alert-modal">
+            <div class="modal-badge-icon"><i data-lucide="smartphone"></i></div>
             <h3>Instalar FluxoPróximo</h3>
             <p id="instrucao-instalacao-texto" class="text-muted mt-2">
-                Adicione a aplicação ao ecrã inicial do seu telemóvel para abrir mais rápido, em ecrã inteiro e sem zoom.
+                Adicione o aplicativo à tela inicial do celular para abrir em tela cheia e sem zoom.
             </p>
-            <div class="modal-actions mt-4" style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
-                <button id="btn-confirmar-instalacao" class="btn-primary">Instalar Agora</button>
-                <button id="btn-fechar-instalacao" class="btn-ghost btn-fechar">Agora Não</button>
+            <div class="modal-actions mt-4">
+                <button type="button" id="btn-confirmar-instalacao" class="btn btn-emerald">
+                    <i data-lucide="download"></i>
+                    <span>Instalar Agora</span>
+                </button>
+                <button type="button" id="btn-fechar-instalacao" class="btn btn-ghost btn-fechar">Agora Não</button>
             </div>
         </div>
     </div>
 
+    <!-- Modal Nova Categoria -->
     <div id="modal-nova-categoria" class="modal-overlay hidden" style="z-index: 10005;">
-        <div class="modal-content shadow-xl" style="max-width: 350px;">
+        <div class="modal-content" style="max-width: 360px;">
             <div class="modal-header">
-                <h2>Nova Categoria</h2>
-                <button class="btn-close-modal btn-fechar">✖</button>
+                <div class="modal-title-group">
+                    <i data-lucide="tag" class="modal-header-icon"></i>
+                    <h2>Nova Categoria</h2>
+                </div>
+                <button type="button" class="btn-close-modal btn-fechar" aria-label="Fechar">
+                    <i data-lucide="x"></i>
+                </button>
             </div>
-            <form id="form-nova-categoria" class="mt-4" style="text-align: left;">
+            <form id="form-nova-categoria" class="form-stack mt-4">
                 <div class="form-group">
-                    <label class="label-premium">Nome da Categoria</label>
+                    <label class="label-premium" for="input-nova-cat">Nome da Categoria</label>
                     <input type="text" id="input-nova-cat" class="input-premium" placeholder="Ex: Farmácia, Estudos..." required>
                 </div>
-                <button type="submit" class="btn-primary w-100 mt-3">Adicionar Categoria</button>
+                <button type="submit" class="btn btn-emerald w-100 mt-2">
+                    <i data-lucide="plus"></i>
+                    <span>Adicionar Categoria</span>
+                </button>
             </form>
         </div>
     </div>
 
+    <!-- Modal Simulador -->
     <div id="modal-form-simulador" class="modal-overlay hidden">
-        <div class="modal-content form-modal shadow-xl" style="max-width: 500px;">
+        <div class="modal-content form-modal" style="max-width: 500px;">
             <div class="modal-header">
-                <div>
-                    <h2>Simulador Financeiro</h2>
-                    <p class="text-muted text-sm mt-1">Análise de risco para novas dívidas</p>
+                <div class="modal-title-group">
+                    <i data-lucide="calculator" class="modal-header-icon"></i>
+                    <div>
+                        <h2>Simulador Financeiro</h2>
+                        <p class="text-muted text-sm">Análise de impacto antes de comprar</p>
+                    </div>
                 </div>
-                <button class="btn-close-modal btn-fechar" style="align-self: flex-start;">✖</button>
+                <button type="button" class="btn-close-modal btn-fechar" aria-label="Fechar">
+                    <i data-lucide="x"></i>
+                </button>
             </div>
             <form id="form-simulador" class="modern-form mt-4">
                 <div class="form-group full-width">
-                    <label class="label-premium">Valor da Nova Compra</label>
-                    <div class="input-with-icon"><span class="icon">R$</span><input type="number" id="sim-valor" class="input-premium" step="0.01" required></div>
+                    <label class="label-premium" for="sim-valor">Valor da Nova Compra</label>
+                    <div class="input-icon-group">
+                        <span class="field-prefix">R$</span>
+                        <input type="number" id="sim-valor" class="input-premium has-prefix" step="0.01" placeholder="0,00" required>
+                    </div>
                 </div>
                 <div class="form-group">
-                    <label class="label-premium">Parcelas</label>
-                    <input type="number" id="sim-parcelas" class="input-premium" min="1" required>
+                    <label class="label-premium" for="sim-parcelas">Parcelas</label>
+                    <input type="number" id="sim-parcelas" class="input-premium" min="1" placeholder="1" required>
                 </div>
                 <div class="form-group">
-                    <label class="label-premium">A partir de</label>
+                    <label class="label-premium" for="sim-mes">A partir de</label>
                     <input type="month" id="sim-mes" class="input-premium" required>
                 </div>
                 <div class="form-actions full-width mt-2">
-                    <button type="submit" class="btn-dark w-100">Gerar Relatório de Viabilidade</button>
+                    <button type="submit" class="btn btn-emerald w-100">
+                        <i data-lucide="bar-chart-2"></i>
+                        <span>Analisar Viabilidade</span>
+                    </button>
                 </div>
             </form>
             <div id="resultado-simulacao" class="resultado-box hidden-smooth mt-4"></div>
         </div>
     </div>
 
+    <!-- Toast Container e Modal de Confirmação -->
     <div id="toast-container" class="toast-container"></div>
     <div id="modal-confirmacao" class="modal-overlay hidden" style="z-index: 10002;">
-        <div class="modal-content alert-modal shadow-xl">
-            <div class="modal-icon text-rose">🗑️</div>
-            <h3 id="modal-titulo">Eliminar Lançamento?</h3>
-            <p id="modal-mensagem" class="text-muted mt-2">Isto recalculará todas as suas projeções futuras.</p>
-            <div class="modal-actions mt-4" style="display: flex; gap: 10px; justify-content: center;">
-                <button id="btn-modal-cancelar" class="btn-ghost">Cancelar</button>
-                <button id="btn-modal-confirmar" class="btn-danger">Eliminar</button>
+        <div class="modal-content alert-modal">
+            <div class="modal-badge-icon danger"><i data-lucide="trash-2"></i></div>
+            <h3 id="modal-titulo">Excluir Lançamento?</h3>
+            <p id="modal-mensagem" class="text-muted mt-2">Isso recalculará todas as suas projeções futuras.</p>
+            <div class="modal-actions mt-4">
+                <button type="button" id="btn-modal-cancelar" class="btn btn-ghost">Cancelar</button>
+                <button type="button" id="btn-modal-confirmar" class="btn btn-danger">
+                    <i data-lucide="trash-2"></i>
+                    <span>Excluir</span>
+                </button>
             </div>
         </div>
     </div>

@@ -44,7 +44,14 @@ if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').ca
 
 setPersistence(auth, browserLocalPersistence).catch(err => console.warn("Persistência local:", err));
 
-// Bloqueia zoom por gesto de pinça e duplo toque no app instalado no telemóvel
+function refreshIcons() {
+    if (window.lucide && typeof window.lucide.createIcons === 'function') {
+        window.lucide.createIcons();
+    }
+}
+refreshIcons();
+
+// Bloqueia zoom por gesto de pinça e duplo toque no app instalado
 document.addEventListener('gesturestart', (e) => e.preventDefault());
 let lastTouchEnd = 0;
 document.addEventListener('touchend', (e) => {
@@ -61,7 +68,7 @@ let deferredInstallPrompt = null;
 const formatadorReal = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 let meuGrafico = null;
 let idEdicaoAtual = null;
-const PALETA_CORES = ['#4f46e5', '#ec4899', '#f59e0b', '#10b981', '#06b6d4', '#f43f5e', '#8b5cf6', '#14b8a6', '#f97316', '#84cc16'];
+const PALETA_CORES = ['#22E56D', '#38BDF8', '#A78BFA', '#FBBF24', '#FB7185', '#34D399', '#818CF8', '#F472B6', '#2DD4BF', '#A3E635'];
 
 function isAppInstalled() {
     return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
@@ -83,7 +90,7 @@ window.addEventListener('appinstalled', () => {
     deferredInstallPrompt = null;
     document.getElementById('btn-instalar-app-topbar').classList.add('hidden');
     toggleModal('modal-instalar-app', 'close');
-    showToast("FluxoPróximo instalado no telemóvel!", "📲");
+    showToast("FluxoPróximo instalado no dispositivo.", "success");
 });
 
 function abrirPromptInstalacaoSeAplicavel() {
@@ -92,11 +99,11 @@ function abrirPromptInstalacaoSeAplicavel() {
     const btnInstalar = document.getElementById('btn-confirmar-instalacao');
 
     if (deferredInstallPrompt) {
-        textoEl.textContent = "Instale o FluxoPróximo no ecrã inicial para acesso rápido e ecrã inteiro no telemóvel.";
+        textoEl.textContent = "Instale o FluxoPróximo na tela inicial para acesso rápido, tela cheia e sem zoom.";
         btnInstalar.classList.remove('hidden');
         toggleModal('modal-instalar-app', 'open');
     } else if (isIosDevice()) {
-        textoEl.textContent = "No Safari do iPhone, toque em Partilhar (⬆️) e depois em 'Adicionar ao Ecrã Principal'.";
+        textoEl.textContent = "No Safari do iPhone, toque em Compartilhar e escolha 'Adicionar à Tela de Início'.";
         btnInstalar.classList.add('hidden');
         toggleModal('modal-instalar-app', 'open');
     }
@@ -161,39 +168,51 @@ function atualizarAvatarHeader(fotoUrl) {
 
 document.getElementById('auth-foto-file').addEventListener('change', async (e) => {
     const file = e.target.files[0];
-    if (!file) { fotoCadastroBase64 = null; return; }
+    if (!file) {
+        fotoCadastroBase64 = null;
+        document.getElementById('auth-foto-label').textContent = 'Selecionar imagem';
+        return;
+    }
     try {
         fotoCadastroBase64 = await lerImagemComprimida(file);
         const prev = document.getElementById('preview-foto-cadastro');
         prev.src = fotoCadastroBase64;
         prev.classList.remove('hidden');
+        document.getElementById('auth-foto-label').textContent = file.name;
     } catch {
-        showToast("Erro ao carregar foto.", "❌");
+        showToast("Erro ao carregar imagem.", "error");
     }
 });
 
-function showToast(mensagem, icon = '✅') {
+function showToast(mensagem, tipo = 'success') {
     const container = document.getElementById('toast-container');
     const toast = document.createElement('div');
-    toast.className = 'toast';
+    toast.className = `toast ${tipo}`;
 
-    const spanIcon = document.createElement('span');
-    spanIcon.textContent = icon;
+    const dot = document.createElement('span');
+    dot.className = 'toast-dot';
 
     const spanMsg = document.createElement('span');
     spanMsg.textContent = mensagem;
 
-    toast.appendChild(spanIcon);
+    toast.appendChild(dot);
     toast.appendChild(spanMsg);
     container.appendChild(toast);
 
-    setTimeout(() => { toast.style.animation = 'slideIn 0.3s reverse forwards'; setTimeout(() => toast.remove(), 300); }, 3000);
+    setTimeout(() => {
+        toast.style.animation = 'slideIn 0.25s reverse forwards';
+        setTimeout(() => toast.remove(), 250);
+    }, 3000);
 }
 
 function toggleModal(modalId, action) {
     const modal = document.getElementById(modalId);
-    if (action === 'open') modal.classList.remove('hidden');
-    else modal.classList.add('hidden');
+    if (action === 'open') {
+        modal.classList.remove('hidden');
+        refreshIcons();
+    } else {
+        modal.classList.add('hidden');
+    }
 }
 
 document.querySelectorAll('.btn-fechar').forEach(btn => {
@@ -205,7 +224,11 @@ function showConfirmModal(onConfirmCallback) {
     const btnConfirmar = document.getElementById('btn-modal-confirmar');
     const btnCancelar = document.getElementById('btn-modal-cancelar');
 
-    const fechar = () => { toggleModal('modal-confirmacao', 'close'); btnConfirmar.onclick = null; btnCancelar.onclick = null; };
+    const fechar = () => {
+        toggleModal('modal-confirmacao', 'close');
+        btnConfirmar.onclick = null;
+        btnCancelar.onclick = null;
+    };
     btnCancelar.onclick = fechar;
     btnConfirmar.onclick = () => { fechar(); onConfirmCallback(); };
 }
@@ -216,7 +239,7 @@ document.querySelectorAll('input[name="authMode"]').forEach(radio => {
         document.getElementById('grupo-nome-cadastro').classList.toggle('hidden', !isRegister);
         document.getElementById('grupo-foto-cadastro').classList.toggle('hidden', !isRegister);
         document.getElementById('auth-nome').required = isRegister;
-        document.getElementById('btn-auth-submit').textContent = isRegister ? 'Criar Conta' : 'Entrar';
+        document.querySelector('#btn-auth-submit span').textContent = isRegister ? 'Criar Conta' : 'Entrar na Conta';
         document.getElementById('btn-esqueci-senha').classList.toggle('hidden', isRegister);
     });
 });
@@ -224,19 +247,19 @@ document.querySelectorAll('input[name="authMode"]').forEach(radio => {
 document.getElementById('btn-esqueci-senha').addEventListener('click', async () => {
     const email = document.getElementById('auth-email').value.trim();
     if (!email) {
-        showToast("Digite o seu e-mail acima para recuperar a palavra-passe.", "⚠️");
+        showToast("Digite seu e-mail acima para recuperar a senha.", "error");
         document.getElementById('auth-email').focus();
         return;
     }
 
     try {
         await sendPasswordResetEmail(auth, email);
-        showToast("Ligação de redefinição enviada para o seu e-mail!", "📧");
+        showToast("Link de redefinição enviado para o seu e-mail.", "success");
     } catch (error) {
         let msg = "Não foi possível enviar o e-mail de recuperação.";
         if (error.code === 'auth/invalid-email') msg = "Informe um e-mail válido.";
         else if (error.code === 'auth/user-not-found') msg = "Nenhuma conta encontrada com este e-mail.";
-        showToast(msg, "❌");
+        showToast(msg, "error");
     }
 });
 
@@ -264,28 +287,29 @@ document.getElementById('form-auth').addEventListener('submit', async (e) => {
 
             fotoCadastroBase64 = null;
             document.getElementById('preview-foto-cadastro').classList.add('hidden');
-            showToast("Conta criada com sucesso!", "🎉");
+            document.getElementById('auth-foto-label').textContent = 'Selecionar imagem';
+            showToast("Conta criada com sucesso.", "success");
         } else {
             await signInWithEmailAndPassword(auth, email, senha);
-            showToast("Bem-vindo de volta!", "👋");
+            showToast("Sessão iniciada.", "success");
         }
         document.getElementById('form-auth').reset();
         setTimeout(abrirPromptInstalacaoSeAplicavel, 700);
     } catch (error) {
         let msg = "Erro ao autenticar.";
-        if (error.code === 'auth/email-already-in-use') msg = "Este e-mail já está em uso.";
-        else if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') msg = "E-mail ou palavra-passe inválidos.";
-        else if (error.code === 'auth/weak-password') msg = "A palavra-passe deve ter no mínimo 6 caracteres.";
-        showToast(msg, "❌");
+        if (error.code === 'auth/email-already-in-use') msg = "Este e-mail já está cadastrado.";
+        else if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') msg = "E-mail ou senha inválidos.";
+        else if (error.code === 'auth/weak-password') msg = "A senha deve ter no mínimo 6 caracteres.";
+        showToast(msg, "error");
     }
 });
 
 document.getElementById('btn-logout').addEventListener('click', async () => {
     try {
         await signOut(auth);
-        showToast("Sessão encerrada.", "🔒");
-    } catch (error) {
-        showToast("Erro ao sair.", "❌");
+        showToast("Sessão encerrada.", "success");
+    } catch {
+        showToast("Erro ao sair da conta.", "error");
     }
 });
 
@@ -299,6 +323,7 @@ onAuthStateChanged(auth, async (user) => {
         subtitulo.textContent = `Olá, ${user.displayName || user.email}`;
         authScreen.classList.add('hidden');
         appLayout.classList.remove('hidden');
+        refreshIcons();
         await inicializarApp();
     } else {
         currentUserId = null;
@@ -307,6 +332,7 @@ onAuthStateChanged(auth, async (user) => {
         if (meuGrafico) { meuGrafico.destroy(); meuGrafico = null; }
         appLayout.classList.add('hidden');
         authScreen.classList.remove('hidden');
+        refreshIcons();
     }
 });
 
@@ -317,9 +343,14 @@ document.getElementById('btn-abrir-perfil').addEventListener('click', async () =
     const fotoAtual = snap.exists() ? (snap.data().fotoUrl || "") : "";
     document.getElementById('input-foto-url').value = fotoAtual.startsWith('http') ? fotoAtual : '';
     document.getElementById('input-foto-arquivo').value = '';
+    document.getElementById('modal-foto-label').textContent = 'Escolher imagem';
     const prev = document.getElementById('preview-foto-modal');
-    if (fotoAtual) { prev.src = fotoAtual; prev.classList.remove('hidden'); }
-    else { prev.classList.add('hidden'); }
+    if (fotoAtual) {
+        prev.src = fotoAtual;
+        prev.classList.remove('hidden');
+    } else {
+        prev.classList.add('hidden');
+    }
     toggleModal('modal-perfil', 'open');
 });
 
@@ -328,6 +359,7 @@ document.getElementById('input-foto-arquivo').addEventListener('change', async (
     if (!file) return;
     const base64 = await lerImagemComprimida(file);
     document.getElementById('input-foto-url').value = base64;
+    document.getElementById('modal-foto-label').textContent = file.name;
     const prev = document.getElementById('preview-foto-modal');
     prev.src = base64;
     prev.classList.remove('hidden');
@@ -341,13 +373,13 @@ document.getElementById('form-foto-perfil').addEventListener('submit', async (e)
         await setDoc(doc(db, "usuarios", currentUserId), { fotoUrl: fotoFinal }, { merge: true });
         atualizarAvatarHeader(fotoFinal);
         toggleModal('modal-perfil', 'close');
-        showToast("Foto atualizada!", "🖼️");
+        showToast("Foto de perfil atualizada.", "success");
     } catch {
-        showToast("Erro ao guardar foto.", "❌");
+        showToast("Erro ao salvar foto.", "error");
     }
 });
 
-// Gestão de Cartões de Crédito
+// Gerenciamento de Cartões de Crédito
 async function carregarCartoesUsuario(selecionarId = null) {
     if (!currentUserId) return;
     const snap = await getDoc(doc(db, "usuarios", currentUserId));
@@ -372,7 +404,7 @@ function renderizarListaCartoes() {
     if (!cartoesUsuario.length) {
         const p = document.createElement('p');
         p.className = 'text-muted text-sm text-center';
-        p.textContent = 'Nenhum cartão registado ainda.';
+        p.textContent = 'Nenhum cartão cadastrado ainda.';
         container.appendChild(p);
         return;
     }
@@ -388,7 +420,7 @@ function renderizarListaCartoes() {
 
         const dot = document.createElement('span');
         dot.className = 'cartao-dot';
-        dot.style.backgroundColor = c.cor || '#4f46e5';
+        dot.style.backgroundColor = c.cor || '#22E56D';
 
         const info = document.createElement('div');
         const strong = document.createElement('strong');
@@ -406,15 +438,16 @@ function renderizarListaCartoes() {
 
         const btnRem = document.createElement('button');
         btnRem.type = 'button';
-        btnRem.className = 'btn-icon btn-remover-cartao';
+        btnRem.className = 'btn-icon danger btn-remover-cartao';
         btnRem.dataset.id = c.id;
         btnRem.title = 'Remover cartão';
-        btnRem.textContent = '🗑️';
+        btnRem.innerHTML = '<i data-lucide="trash-2"></i>';
 
         div.appendChild(left);
         div.appendChild(btnRem);
         container.appendChild(div);
     });
+    refreshIcons();
 }
 
 document.getElementById('btn-abrir-cartoes').addEventListener('click', async () => {
@@ -432,7 +465,7 @@ document.getElementById('form-novo-cartao').addEventListener('submit', async (e)
     if (!currentUserId) return;
     const nome = document.getElementById('input-nome-cartao').value.trim();
     const fechamento = parseInt(document.getElementById('input-fechamento-cartao').value, 10) || null;
-    const cor = document.getElementById('input-cor-cartao').value || '#4f46e5';
+    const cor = document.getElementById('input-cor-cartao').value || '#22E56D';
     if (!nome) return;
 
     const novoCartao = { id: 'card_' + Date.now(), nome, fechamento, cor };
@@ -441,10 +474,11 @@ document.getElementById('form-novo-cartao').addEventListener('submit', async (e)
     try {
         await setDoc(doc(db, "usuarios", currentUserId), { cartoes: atualizados }, { merge: true });
         document.getElementById('form-novo-cartao').reset();
+        document.getElementById('input-cor-cartao').value = '#22e56d';
         await carregarCartoesUsuario(novoCartao.id);
-        showToast("Cartão adicionado!", "💳");
+        showToast("Cartão adicionado.", "success");
     } catch {
-        showToast("Erro ao adicionar cartão.", "❌");
+        showToast("Erro ao adicionar cartão.", "error");
     }
 });
 
@@ -456,9 +490,9 @@ document.getElementById('lista-cartoes-container').addEventListener('click', asy
     try {
         await setDoc(doc(db, "usuarios", currentUserId), { cartoes: filtrados }, { merge: true });
         await carregarCartoesUsuario();
-        showToast("Cartão removido.", "🗑️");
+        showToast("Cartão removido.", "success");
     } catch {
-        showToast("Erro ao remover cartão.", "❌");
+        showToast("Erro ao remover cartão.", "error");
     }
 });
 
@@ -520,9 +554,9 @@ document.getElementById('form-nova-categoria').addEventListener('submit', async 
         await carregarCategoriasNoSelect(catFormatada);
         document.getElementById('input-nova-cat').value = '';
         toggleModal('modal-nova-categoria', 'close');
-        showToast("Categoria criada!", "🏷️");
-    } catch (error) {
-        showToast("Erro ao criar categoria.", "❌");
+        showToast("Categoria criada.", "success");
+    } catch {
+        showToast("Erro ao criar categoria.", "error");
     }
 });
 
@@ -530,7 +564,7 @@ document.getElementById('btn-abrir-lancamento').addEventListener('click', async 
     idEdicaoAtual = null;
     document.getElementById("form-despesa").reset();
     document.getElementById("modal-lancamento-titulo").textContent = "Adicionar Lançamento";
-    document.getElementById("btn-submit-lancamento").textContent = "Guardar Lançamento";
+    document.querySelector("#btn-submit-lancamento span").textContent = "Salvar Lançamento";
     document.getElementById("tipo-parcelada").click();
     document.getElementById("pag-debito").click();
     await carregarCategoriasNoSelect();
@@ -596,8 +630,8 @@ async function atualizarDashboardMensal() {
 
                 const cartaoObj = metodo === 'credito' && despesa.cartaoId ? mapaCartoes[despesa.cartaoId] : null;
                 const rotuloMetodo = metodo === 'credito'
-                    ? (cartaoObj ? `💳 ${cartaoObj.nome}` : '💳 Crédito')
-                    : '💵 Débito';
+                    ? (cartaoObj ? cartaoObj.nome : 'Crédito')
+                    : 'Débito';
 
                 const tr = document.createElement("tr");
 
@@ -621,31 +655,38 @@ async function atualizarDashboardMensal() {
                 const mBadge = document.createElement("span");
                 mBadge.className = "metodo-badge";
                 if (cartaoObj?.cor) mBadge.style.borderColor = cartaoObj.cor;
-                mBadge.textContent = rotuloMetodo;
+                mBadge.innerHTML = metodo === 'credito'
+                    ? `<i data-lucide="credit-card" style="width:12px;height:12px;"></i>`
+                    : `<i data-lucide="banknote" style="width:12px;height:12px;"></i>`;
+                const mText = document.createElement("span");
+                mText.textContent = rotuloMetodo;
+                mBadge.appendChild(mText);
                 divMetodo.appendChild(mBadge);
 
                 tdCat.appendChild(badge);
                 tdCat.appendChild(divMetodo);
 
                 const tdValor = document.createElement("td");
-                tdValor.style.fontWeight = "600";
+                tdValor.style.fontWeight = "700";
                 tdValor.textContent = formatadorReal.format(despesa.valorParcela);
 
                 const tdAcoes = document.createElement("td");
                 tdAcoes.className = "text-right";
 
                 const btnEditar = document.createElement("button");
+                btnEditar.type = "button";
                 btnEditar.className = "btn-icon btn-editar";
                 btnEditar.dataset.id = documento.id;
                 btnEditar.title = "Editar";
-                btnEditar.textContent = "✏️";
+                btnEditar.innerHTML = '<i data-lucide="pencil"></i>';
 
                 const btnExcluir = document.createElement("button");
-                btnExcluir.className = "btn-icon btn-excluir";
+                btnExcluir.type = "button";
+                btnExcluir.className = "btn-icon danger btn-excluir";
                 btnExcluir.dataset.id = documento.id;
-                btnExcluir.title = "Eliminar";
-                btnExcluir.style.marginLeft = "8px";
-                btnExcluir.textContent = "🗑️";
+                btnExcluir.title = "Excluir";
+                btnExcluir.style.marginLeft = "6px";
+                btnExcluir.innerHTML = '<i data-lucide="trash-2"></i>';
 
                 tdAcoes.appendChild(btnEditar);
                 tdAcoes.appendChild(btnExcluir);
@@ -657,6 +698,8 @@ async function atualizarDashboardMensal() {
                 tbody.appendChild(tr);
             }
         });
+
+        refreshIcons();
 
         const ctx = document.getElementById('categoryChart').getContext('2d');
         if (meuGrafico) meuGrafico.destroy();
@@ -672,10 +715,21 @@ async function atualizarDashboardMensal() {
                     datasets: [{
                         data: Object.values(gastosCategoria),
                         backgroundColor: dataColors,
-                        borderWidth: 0, hoverOffset: 4
+                        borderWidth: 0,
+                        hoverOffset: 4
                     }]
                 },
-                options: { responsive: true, maintainAspectRatio: false, cutout: '75%', plugins: { legend: { display: false } } }
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '72%',
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: '#9AA6A0', boxWidth: 10, padding: 14 }
+                        }
+                    }
+                }
             });
             document.querySelector('.chart-container').classList.remove('hidden');
             emptyState.classList.add('hidden');
@@ -692,17 +746,9 @@ async function atualizarDashboardMensal() {
         document.getElementById("dash-detalhe-metodos").textContent = `Débito: ${formatadorReal.format(totalDebitoMes)} • Crédito: ${formatadorReal.format(totalCreditoMes)}`;
         document.getElementById("dash-saldo").textContent = formatadorReal.format(saldoLivre);
 
-        const cardSaldo = document.getElementById("card-saldo");
-        if (saldoLivre < 0) {
-            cardSaldo.classList.remove('balance-positive'); cardSaldo.classList.add('balance-negative');
-        } else {
-            cardSaldo.classList.remove('balance-negative'); cardSaldo.classList.add('balance-positive');
-        }
-
-        document.getElementById("dashboard-mensal").classList.remove("hidden-smooth");
-        document.getElementById("dashboard-mensal").classList.add("show-smooth");
-
-    } catch (error) { showToast("Erro ao carregar dados.", "❌"); }
+    } catch {
+        showToast("Erro ao carregar dados.", "error");
+    }
 }
 
 function mudarMes(delta) {
@@ -760,14 +806,24 @@ document.querySelectorAll('input[name="tipoDespesa"]').forEach(radio => {
         const grupoFixa = document.getElementById('grupo-fixa');
 
         if (e.target.value === 'fixa') {
-            grupoParcelada.classList.remove('show-smooth'); grupoParcelada.classList.add('hidden-smooth');
-            setTimeout(() => { grupoFixa.classList.remove('hidden-smooth'); grupoFixa.classList.add('show-smooth'); }, 200);
-            document.getElementById('valor-total').required = false; document.getElementById('parcelas').required = false;
+            grupoParcelada.classList.remove('show-smooth');
+            grupoParcelada.classList.add('hidden-smooth');
+            setTimeout(() => {
+                grupoFixa.classList.remove('hidden-smooth');
+                grupoFixa.classList.add('show-smooth');
+            }, 180);
+            document.getElementById('valor-total').required = false;
+            document.getElementById('parcelas').required = false;
             document.getElementById('valor-mensal-fixo').required = true;
         } else {
-            grupoFixa.classList.remove('show-smooth'); grupoFixa.classList.add('hidden-smooth');
-            setTimeout(() => { grupoParcelada.classList.remove('hidden-smooth'); grupoParcelada.classList.add('show-smooth'); }, 200);
-            document.getElementById('valor-total').required = true; document.getElementById('parcelas').required = true;
+            grupoFixa.classList.remove('show-smooth');
+            grupoFixa.classList.add('hidden-smooth');
+            setTimeout(() => {
+                grupoParcelada.classList.remove('hidden-smooth');
+                grupoParcelada.classList.add('show-smooth');
+            }, 180);
+            document.getElementById('valor-total').required = true;
+            document.getElementById('parcelas').required = true;
             document.getElementById('valor-mensal-fixo').required = false;
         }
     });
@@ -780,7 +836,7 @@ document.getElementById("form-usuario").addEventListener("submit", async (e) => 
     if (!currentUserId) return;
     const salario = parseFloat(document.getElementById("salario").value);
     await setDoc(doc(db, "usuarios", currentUserId), { salarioBase: salario, atualizadoEm: new Date().toISOString() }, { merge: true });
-    showToast("Renda atualizada!", "💰");
+    showToast("Renda atualizada.", "success");
     inicializarApp();
 });
 
@@ -798,7 +854,9 @@ document.getElementById("form-despesa").addEventListener("submit", async (e) => 
 
     if (isFixa) {
         valorParcela = parseFloat(document.getElementById("valor-mensal-fixo").value);
-        valorTotal = null; parcelasTotal = null; mesFim = null;
+        valorTotal = null;
+        parcelasTotal = null;
+        mesFim = null;
     } else {
         valorTotal = parseFloat(document.getElementById("valor-total").value);
         parcelasTotal = parseInt(document.getElementById("parcelas").value);
@@ -827,17 +885,19 @@ document.getElementById("form-despesa").addEventListener("submit", async (e) => 
     try {
         if (idEdicaoAtual) {
             await updateDoc(doc(db, "transacoes", idEdicaoAtual), payload);
-            showToast("Lançamento atualizado!", "✏️");
+            showToast("Lançamento atualizado.", "success");
         } else {
             payload.dataCadastro = new Date().toISOString();
             await addDoc(collection(db, "transacoes"), payload);
-            showToast("Lançamento efetuado!", "✅");
+            showToast("Lançamento salvo.", "success");
         }
 
         document.getElementById("form-despesa").reset();
         toggleModal('modal-form-lancamento', 'close');
         atualizarDashboardMensal();
-    } catch (error) { showToast("Erro ao guardar.", "❌"); }
+    } catch {
+        showToast("Erro ao salvar lançamento.", "error");
+    }
 });
 
 document.getElementById("lista-despesas-corpo").addEventListener("click", async (e) => {
@@ -847,7 +907,7 @@ document.getElementById("lista-despesas-corpo").addEventListener("click", async 
     if (btnExcluir) {
         showConfirmModal(async () => {
             await deleteDoc(doc(db, "transacoes", btnExcluir.getAttribute("data-id")));
-            showToast("Removido com sucesso.", "🗑️");
+            showToast("Lançamento excluído.", "success");
             atualizarDashboardMensal();
         });
     }
@@ -880,10 +940,12 @@ document.getElementById("lista-despesas-corpo").addEventListener("click", async 
                 }
 
                 document.getElementById("modal-lancamento-titulo").textContent = "Editar Lançamento";
-                document.getElementById("btn-submit-lancamento").textContent = "Atualizar Lançamento";
+                document.querySelector("#btn-submit-lancamento span").textContent = "Atualizar Lançamento";
                 toggleModal('modal-form-lancamento', 'open');
             }
-        } catch (error) { showToast("Erro ao carregar dados.", "❌"); }
+        } catch {
+            showToast("Erro ao carregar lançamento.", "error");
+        }
     }
 });
 
@@ -896,8 +958,9 @@ document.getElementById("form-simulador").addEventListener("submit", async (e) =
     const resultadoBox = document.getElementById("resultado-simulacao");
     const valorNovaParcela = valorTotal / parcelas;
 
-    resultadoBox.classList.remove("hidden-smooth"); resultadoBox.classList.add("show-smooth");
-    resultadoBox.innerHTML = "<p class='text-center'>A analisar cenários financeiros...</p>";
+    resultadoBox.classList.remove("hidden-smooth");
+    resultadoBox.classList.add("show-smooth");
+    resultadoBox.innerHTML = "<p class='text-center text-muted'>Analisando cenários financeiros...</p>";
 
     try {
         const userSnap = await getDoc(doc(db, "usuarios", currentUserId));
@@ -927,26 +990,31 @@ document.getElementById("form-simulador").addEventListener("submit", async (e) =
             });
 
             const saldoNoMes = rendaMensal - (despesasMes + valorNovaParcela);
-            if (saldoNoMes < menorSaldo) { menorSaldo = saldoNoMes; mesMaisCritico = `${mesSimuladoStr.split('-')[1]}/${mesSimuladoStr.split('-')[0]}`; }
+            if (saldoNoMes < menorSaldo) {
+                menorSaldo = saldoNoMes;
+                mesMaisCritico = `${mesSimuladoStr.split('-')[1]}/${mesSimuladoStr.split('-')[0]}`;
+            }
             if (saldoNoMes < 0) mesesNegativos++;
         }
 
         const impactoRenda = rendaMensal > 0 ? ((valorNovaParcela / rendaMensal) * 100).toFixed(1) : "0.0";
         let statusHtml = "";
 
-        if (mesesNegativos > 0) statusHtml = `<div class="status-bar status-danger">⚠️ Compra Inviável! Défice em ${mesesNegativos} meses.</div>`;
-        else if (menorSaldo < (rendaMensal * 0.1)) statusHtml = `<div class="status-bar status-warning">⚡ Atenção: Margem de sobra muito baixa no pior mês.</div>`;
-        else statusHtml = `<div class="status-bar status-safe">✅ Compra Segura! Margem confortável garantida.</div>`;
+        if (mesesNegativos > 0) statusHtml = `<div class="status-bar status-danger">Compra inviável: déficit previsto em ${mesesNegativos} mês(es).</div>`;
+        else if (menorSaldo < (rendaMensal * 0.1)) statusHtml = `<div class="status-bar status-warning">Atenção: margem livre muito baixa no pior mês.</div>`;
+        else statusHtml = `<div class="status-bar status-safe">Compra viável: margem livre confortável garantida.</div>`;
 
         resultadoBox.innerHTML = `
-            <h3 style="font-size: 1.1rem; color: var(--slate-900); border-bottom: 1px solid var(--slate-200); padding-bottom: 8px;">📊 Relatório Analítico</h3>
+            <h3 style="font-size: 0.95rem; color: #fff; border-bottom: 1px solid var(--border-dark); padding-bottom: 8px;">Relatório Analítico</h3>
             <div class="report-grid">
-                <div class="report-item"><span class="report-label">Valor da Prestação</span><span class="report-value">${formatadorReal.format(valorNovaParcela)}</span></div>
+                <div class="report-item"><span class="report-label">Valor da Parcela</span><span class="report-value">${formatadorReal.format(valorNovaParcela)}</span></div>
                 <div class="report-item"><span class="report-label">Impacto na Renda</span><span class="report-value text-rose">${impactoRenda}%</span></div>
-                <div class="report-item"><span class="report-label">Pior Cenário (Data)</span><span class="report-value">${mesMaisCritico || '-'}</span></div>
-                <div class="report-item"><span class="report-label">Saldo no Pior Cenário</span><span class="report-value ${menorSaldo < 0 ? 'text-rose' : 'text-emerald'}">${formatadorReal.format(menorSaldo)}</span></div>
+                <div class="report-item"><span class="report-label">Pior Cenário</span><span class="report-value">${mesMaisCritico || '-'}</span></div>
+                <div class="report-item"><span class="report-label">Saldo no Pior Mês</span><span class="report-value ${menorSaldo < 0 ? 'text-rose' : 'text-emerald'}">${formatadorReal.format(menorSaldo)}</span></div>
             </div>
             ${statusHtml}
         `;
-    } catch (error) { resultadoBox.innerHTML = "<p>Erro na simulação.</p>"; }
+    } catch {
+        resultadoBox.innerHTML = "<p class='text-center text-rose'>Erro ao processar simulação.</p>";
+    }
 });

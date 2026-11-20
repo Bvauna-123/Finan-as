@@ -1,16 +1,16 @@
-const CACHE_NAME = 'fluxoproximo-v9';
+const CACHE_NAME = 'fluxoproximo-v12';
 const urlsToCache = [
     './',
     './index.html',
     './style.css',
     './app.js',
     './manifest.json',
-    'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap',
-    'https://cdn.jsdelivr.net/npm/chart.js'
+    'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap',
+    'https://cdn.jsdelivr.net/npm/chart.js',
+    'https://unpkg.com/lucide@latest'
 ];
 
 self.addEventListener('install', event => {
-    // Força a ativação imediata do sw atualizado
     self.skipWaiting();
     event.waitUntil(
         caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache))
@@ -18,7 +18,6 @@ self.addEventListener('install', event => {
 });
 
 self.addEventListener('activate', event => {
-    // Elimina caches antigos imediatamente ao detectar novas versões
     event.waitUntil(
         caches.keys().then(keys =>
             Promise.all(
