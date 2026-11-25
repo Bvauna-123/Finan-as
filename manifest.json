@@ -1,11 +1,10 @@
 {
-  "name": "Zedona",
+  "name": "Zedona | Controle Financeiro Inteligente",
   "short_name": "Zedona",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#0A0D0B",
-  "theme_color": "#22E56D",
-  "description": "Zedona: controle financeiro inteligente, cartões e simulador de caixa.",
+  "theme_color": "#0A0D0B",
   "icons": [
     {
       "src": "./assets/icone-app.png",

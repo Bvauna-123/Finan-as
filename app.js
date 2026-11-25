@@ -529,7 +529,6 @@ function renderizarVisualizacaoCartoes() {
     const mesSelecionado = mesInput.value;
     const mesBaseDashboard = document.getElementById('consulta-mes')?.value || mesSelecionado;
 
-    // Atalhos rápidos: mês atual do painel e os próximos 3 meses
     const atalhos = [
         { ym: mesBaseDashboard, rotulo: `Atual (${formatarMesCurto(mesBaseDashboard)})` },
         { ym: adicionarMeses(mesBaseDashboard, 1), rotulo: formatarMesCurto(adicionarMeses(mesBaseDashboard, 1)) },
@@ -593,7 +592,16 @@ function renderizarVisualizacaoCartoes() {
 
         brandWrap.appendChild(chip);
         brandWrap.appendChild(nomeStrong);
+
+        const btnRem = document.createElement('button');
+        btnRem.type = 'button';
+        btnRem.className = 'btn-icon danger btn-remover-cartao';
+        btnRem.dataset.id = c.id;
+        btnRem.title = 'Excluir cartão';
+        btnRem.innerHTML = '<i data-lucide="trash-2"></i>';
+
         topRow.appendChild(brandWrap);
+        topRow.appendChild(btnRem);
 
         const faturaBox = document.createElement('div');
         faturaBox.className = 'cartao-visual-fatura';
@@ -682,6 +690,69 @@ document.getElementById('btn-cartao-mes-next').addEventListener('click', () => {
     const el = document.getElementById('cartao-mes-estimativa');
     el.value = adicionarMeses(el.value, 1);
     renderizarVisualizacaoCartoes();
+});
+
+document.getElementById('form-novo-cartao').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!currentUserId) return;
+
+    const btnSubmit = e.target.querySelector('button[type="submit"]');
+    const nomeInput = document.getElementById('input-nome-cartao');
+    const fechInput = document.getElementById('input-fechamento-cartao');
+    const vencInput = document.getElementById('input-vencimento-cartao');
+    const corInput = document.getElementById('input-cor-cartao');
+
+    const nome = nomeInput.value.trim();
+    const fechamento = parseInt(fechInput.value, 10) || null;
+    const vencimento = parseInt(vencInput.value, 10) || null;
+    const cor = corInput.value || '#22E56D';
+    if (!nome) return;
+
+    const estadoAnterior = [...cartoesUsuario];
+    const novoCartao = { id: 'card_' + Date.now(), nome, fechamento, vencimento, cor };
+    cartoesUsuario = [...cartoesUsuario, novoCartao];
+
+    nomeInput.value = '';
+    fechInput.value = '';
+    vencInput.value = '';
+    corInput.value = '#22e56d';
+
+    aplicarCartoesNaTela(novoCartao.id);
+    showToast("Cartão adicionado.", "success");
+
+    setBotaoCarregando(btnSubmit, true, 'Salvando...');
+    try {
+        await setDoc(doc(db, "usuarios", currentUserId), { cartoes: cartoesUsuario }, { merge: true });
+    } catch {
+        cartoesUsuario = estadoAnterior;
+        aplicarCartoesNaTela();
+        showToast("Falha ao sincronizar cartão.", "error");
+    } finally {
+        setBotaoCarregando(btnSubmit, false);
+    }
+});
+
+document.getElementById('lista-cartoes-container').addEventListener('click', async (e) => {
+    const btn = e.target.closest('.btn-remover-cartao');
+    if (!btn || !currentUserId || btn.disabled) return;
+
+    const idRemover = btn.dataset.id;
+    const estadoAnterior = [...cartoesUsuario];
+
+    cartoesUsuario = cartoesUsuario.filter(c => c.id !== idRemover);
+    aplicarCartoesNaTela();
+    showToast("Cartão removido.", "success");
+
+    btn.disabled = true;
+    try {
+        await setDoc(doc(db, "usuarios", currentUserId), { cartoes: cartoesUsuario }, { merge: true });
+    } catch {
+        cartoesUsuario = estadoAnterior;
+        aplicarCartoesNaTela();
+        showToast("Falha ao remover cartão na nuvem.", "error");
+    } finally {
+        btn.disabled = false;
+    }
 });
 
 document.querySelectorAll('input[name="formaPagamento"]').forEach(radio => {

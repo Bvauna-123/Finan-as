@@ -732,6 +732,8 @@ svg.lucide {
 .cartao-mes-toolbar {
     display: flex;
     flex-direction: column;
+    padding-top: 0.95rem;
+    border-top: 1px solid var(--border-dark);
 }
 
 .cartao-mes-pills {
@@ -796,6 +798,7 @@ svg.lucide {
     align-items: center;
     gap: 8px;
     min-width: 0;
+    flex: 1;
 }
 
 .cartao-chip {
