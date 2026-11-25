@@ -671,6 +671,7 @@ function renderizarVisualizacaoCartoes() {
 }
 
 async function abrirModalCartoes() {
+    definirEstadoPainelNovoCartao(false);
     const mesBase = document.getElementById('consulta-mes')?.value || new Date().toISOString().substring(0, 7);
     document.getElementById('cartao-mes-estimativa').value = mesBase;
     await atualizarDashboardMensal();
@@ -690,6 +691,33 @@ document.getElementById('btn-cartao-mes-next').addEventListener('click', () => {
     const el = document.getElementById('cartao-mes-estimativa');
     el.value = adicionarMeses(el.value, 1);
     renderizarVisualizacaoCartoes();
+});
+
+function definirEstadoPainelNovoCartao(aberto) {
+    const painel = document.getElementById('painel-novo-cartao');
+    const btnToggle = document.getElementById('btn-toggle-novo-cartao');
+    if (!painel || !btnToggle) return;
+    painel.classList.toggle('hidden', !aberto);
+    btnToggle.setAttribute('aria-expanded', String(aberto));
+    const span = btnToggle.querySelector('span');
+    if (span) {
+        span.textContent = aberto ? 'Fechar Formulário' : 'Adicionar Cartão';
+    }
+    if (aberto) {
+        setTimeout(() => document.getElementById('input-nome-cartao')?.focus(), 50);
+    }
+}
+
+document.getElementById('btn-toggle-novo-cartao').addEventListener('click', () => {
+    const painel = document.getElementById('painel-novo-cartao');
+    const estaAberto = !painel.classList.contains('hidden');
+    definirEstadoPainelNovoCartao(!estaAberto);
+});
+
+document.getElementById('btn-cancelar-novo-cartao').addEventListener('click', () => {
+    document.getElementById('form-novo-cartao').reset();
+    document.getElementById('input-cor-cartao').value = '#22e56d';
+    definirEstadoPainelNovoCartao(false);
 });
 
 document.getElementById('form-novo-cartao').addEventListener('submit', async (e) => {
@@ -716,6 +744,7 @@ document.getElementById('form-novo-cartao').addEventListener('submit', async (e)
     fechInput.value = '';
     vencInput.value = '';
     corInput.value = '#22e56d';
+    definirEstadoPainelNovoCartao(false);
 
     aplicarCartoesNaTela(novoCartao.id);
     showToast("Cartão adicionado.", "success");

@@ -28,6 +28,26 @@
     --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+html,
+body,
+div,
+section,
+main,
+aside,
+nav,
+header,
+footer,
+form,
+ul,
+ol,
+table,
+tbody,
+thead,
+tr,
+td,
+th,
+select,
+textarea,
 *,
 *::before,
 *::after,
@@ -42,13 +62,21 @@
     box-sizing: border-box;
     font-family: 'Inter', sans-serif;
     -webkit-tap-highlight-color: transparent;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
 }
 
+::-webkit-scrollbar,
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+div::-webkit-scrollbar,
+section::-webkit-scrollbar,
+main::-webkit-scrollbar,
+aside::-webkit-scrollbar,
+form::-webkit-scrollbar,
+select::-webkit-scrollbar,
+textarea::-webkit-scrollbar,
 *::-webkit-scrollbar,
-*::before::-webkit-scrollbar,
-*::after::-webkit-scrollbar,
 .modal-overlay::-webkit-scrollbar,
 .modal-content::-webkit-scrollbar,
 .resultado-box::-webkit-scrollbar,
@@ -56,8 +84,25 @@
 #lista-categorias-container::-webkit-scrollbar,
 #resumo-faturas-mes::-webkit-scrollbar {
     display: none !important;
-    width: 0 !important;
-    height: 0 !important;
+    width: 0px !important;
+    height: 0px !important;
+    max-width: 0px !important;
+    max-height: 0px !important;
+    background: transparent !important;
+    -webkit-appearance: none !important;
+}
+
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-thumb,
+::-webkit-scrollbar-button,
+::-webkit-scrollbar-corner,
+*::-webkit-scrollbar-track,
+*::-webkit-scrollbar-thumb,
+*::-webkit-scrollbar-button,
+*::-webkit-scrollbar-corner {
+    display: none !important;
+    width: 0px !important;
+    height: 0px !important;
     background: transparent !important;
 }
 
@@ -729,6 +774,18 @@ svg.lucide {
 }
 
 /* Seletor de Mês e Atalhos de Próximos Meses nos Cartões */
+.cartao-add-trigger {
+    display: flex;
+    flex-direction: column;
+}
+
+.cartao-add-panel {
+    background: var(--bg-input);
+    border: 1px solid var(--border-dark-strong);
+    border-radius: var(--radius-md);
+    padding: 0.95rem;
+}
+
 .cartao-mes-toolbar {
     display: flex;
     flex-direction: column;
